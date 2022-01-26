@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
 	"net/http"
 	"todo/src/entity"
 )
@@ -26,11 +27,41 @@ func getAlbums(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, albums)
 }
 
+func getNotes(c *gin.Context) {
+	var notes = []entity.Note{
+		{Id: 1, NoteGuid: "not guid", Version: 1,
+			Text: "text", UserId: 1, Deleted: false, Archive: false,
+			NoteFiles: []entity.NoteFile{
+				{Id: 1, NoteId: 1, Guid: "note file guid", Filename: "filename"},
+			},
+		},
+	}
+	c.IndentedJSON(http.StatusOK, notes)
+}
+
 func main() {
+	//db, err := sql.Open("mysql", "mysql:mysql@tcp(127.0.0.1:3306)/todo")
+	//defer db.Close()
+	//
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//var version string
+	//
+	//err2 := db.QueryRow("SELECT VERSION()").Scan(&version)
+	//
+	//if err2 != nil {
+	//	log.Fatal(err2)
+	//}
+	//
+	//fmt.Println("MYSQL VERSION" + version)
+
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
+	router.GET("/getNotes", getNotes)
 
-	err := router.Run("localhost:8111")
+	err := router.Run(":8222")
 	if err != nil {
 		return
 	}

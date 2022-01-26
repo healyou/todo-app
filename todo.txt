@@ -1,3 +1,12 @@
+дописать патч
+
 Что за indirect - почему они появляются, если в mod gin они есть?
 Бд и апдейты через liquibase
 Добавить mysql в go
+
+ go get github.com/go-sql-driver/mysql@v1.6.0
+ go mod tidy
+ docker compose up -d
+
+docker build --no-cache -t todo-app .
+docker build -t todo-app .
