@@ -3,9 +3,14 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"log"
 	"net/http"
 	"todo/src/entity"
 )
+
+//go get github.com/minio/minio-go/v7@v7.0.21
 
 // album represents data about a record album.
 //type album struct {
@@ -57,11 +62,26 @@ func main() {
 	//
 	//fmt.Println("MYSQL VERSION" + version)
 
+	endpoint := "localhost"
+	accessKeyID := "minio"
+	secretAccessKey := "miniopsw"
+
+	// Initialize minio client object.
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: false,
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Printf("%#v\n", minioClient) // minioClient is now setup
+
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
 	router.GET("/getNotes", getNotes)
 
-	err := router.Run(":8222")
+	err = router.Run(":8222")
 	if err != nil {
 		return
 	}

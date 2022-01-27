@@ -16,4 +16,4 @@
 
 .idea/
 db/mysql-data
-go.sum
+minio/data

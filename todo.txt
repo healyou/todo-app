@@ -5,6 +5,7 @@
 Добавить mysql в go
 
  go get github.com/go-sql-driver/mysql@v1.6.0
+ go get github.com/minio/minio-go/v7@v7.0.21
  go mod tidy
  docker compose up -d
 
