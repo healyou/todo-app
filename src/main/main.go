@@ -1,12 +1,18 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"todo/src/entity"
 )
 
@@ -45,7 +51,6 @@ func getNotes(c *gin.Context) {
 }
 
 func main() {
-	//db, err := sql.Open("mysql", "mysql:mysql@tcp(127.0.0.1:3306)/todo")
 	//defer db.Close()
 	//
 	//if err != nil {
@@ -62,7 +67,7 @@ func main() {
 	//
 	//fmt.Println("MYSQL VERSION" + version)
 
-	endpoint := "localhost"
+	endpoint := "localhost:9000"
 	accessKeyID := "minio"
 	secretAccessKey := "miniopsw"
 
@@ -75,14 +80,77 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	log.Printf("%#v\n", minioClient) // minioClient is now setup
-
-	router := gin.Default()
-	router.GET("/albums", getAlbums)
-	router.GET("/getNotes", getNotes)
-
-	err = router.Run(":8222")
+	bucketName := "todo-app-bucket"
+	ctx := context.Background()
+	defer ctx.Done()
+	buckets, err := minioClient.ListBuckets(ctx)
 	if err != nil {
+		log.Fatalln(err)
 		return
 	}
+	for i := 0; i < len(buckets); i++ {
+		log.Println(buckets[i].Name)
+	}
+
+	// Upload the zip file
+	uuidWithHyphen := uuid.New().String()
+	fileName := "Screenshot_580.png"
+	filePath := "C:\\Users\\lappi\\Desktop\\Screenshot_580.png"
+
+	open, err := os.Open(filePath)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+	mtype, err := mimetype.DetectFile(filePath)
+	defer open.Close()
+	stat, err := open.Stat()
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+
+	userMetaData := map[string]string{
+		"Filename": fileName,
+	}
+	options := minio.PutObjectOptions{
+		ContentType:  mtype.String(),
+		UserMetadata: userMetaData,
+	}
+	info, err := minioClient.PutObject(ctx, bucketName, uuidWithHyphen, open, stat.Size(), options)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+	log.Printf("Successfully uploaded %s of size %d\n", fileName, info.Size)
+
+	object, err := minioClient.GetObject(context.Background(), bucketName, uuidWithHyphen, minio.GetObjectOptions{})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	objectInfo, err := object.Stat()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	name := objectInfo.UserMetadata["Filename"]
+	localFile, err := os.Create("C:\\Users\\lappi\\Desktop\\" + uuidWithHyphen + name)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if _, err = io.Copy(localFile, object); err != nil {
+		log.Println(err)
+		return
+	}
+
+	//router := gin.Default()
+	//router.GET("/albums", getAlbums)
+	//router.GET("/getNotes", getNotes)
+	//
+	//err = router.Run(":8222")
+	//if err != nil {
+	//	return
+	//}
 }
