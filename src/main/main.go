@@ -51,22 +51,17 @@ func getNotes(c *gin.Context) {
 }
 
 func main() {
-	//defer db.Close()
-	//
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//var version string
-	//
-	//err2 := db.QueryRow("SELECT VERSION()").Scan(&version)
-	//
-	//if err2 != nil {
-	//	log.Fatal(err2)
-	//}
-	//
-	//fmt.Println("MYSQL VERSION" + version)
+	router := gin.Default()
+	router.GET("/albums", getAlbums)
+	router.GET("/getNotes", getNotes)
 
+	err := router.Run(":8222")
+	if err != nil {
+		return
+	}
+}
+
+func minioExample() {
 	endpoint := "localhost:9000"
 	accessKeyID := "minio"
 	secretAccessKey := "miniopsw"
@@ -144,13 +139,4 @@ func main() {
 		log.Println(err)
 		return
 	}
-
-	//router := gin.Default()
-	//router.GET("/albums", getAlbums)
-	//router.GET("/getNotes", getNotes)
-	//
-	//err = router.Run(":8222")
-	//if err != nil {
-	//	return
-	//}
 }

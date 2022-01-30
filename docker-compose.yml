@@ -55,6 +55,38 @@ services:
       mysql:
         condition: service_healthy
 
+  minio:
+    image: minio/minio:RELEASE.2022-01-27T03-53-02Z
+    container_name: minio
+    #    restart: always
+    command: "server /data --console-address ':9001'"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio/data:/data
+    environment:
+      MINIO_ROOT_USER: "minio"
+      MINIO_ROOT_PASSWORD: "miniopsw"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+  miniomc:
+    image: minio/mc:RELEASE.2022-01-29T01-03-27Z
+    container_name: miniomc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 minio miniopsw;
+      /usr/bin/mc mb --ignore-existing myminio/todo-app-bucket;
+      exit 0;
+      "
+
   todo-app:
     image: todo-app:latest
     container_name: todo-app
@@ -63,4 +95,6 @@ services:
       - "8222:8222"
     depends_on:
       mysql:
+        condition: service_healthy
+      minio:
         condition: service_healthy
