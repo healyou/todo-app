@@ -87,14 +87,14 @@ services:
       exit 0;
       "
 
-  todo-app:
-    image: todo-app:latest
-    container_name: todo-app
-    restart: always
-    ports:
-      - "8222:8222"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
+#  todo-app:
+#    image: todo-app:latest
+#    container_name: todo-app
+#    restart: always
+#    ports:
+#      - "8222:8222"
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#      minio:
+#        condition: service_healthy

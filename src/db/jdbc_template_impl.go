@@ -11,6 +11,46 @@ type JdbcTemplateImpl struct {
 	DbUrl      string
 }
 
+func (jdbcTemplate *JdbcTemplateImpl) ExecuteInTransaction(
+	txFunc func(context context.Context, DB *sql.Tx) error) error {
+
+	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer func(db *sql.DB) {
+		err = db.Close()
+	}(db)
+
+	// Create a new context, and begin a transaction
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = txFunc(ctx, tx)
+
+	if err != nil {
+		err := tx.Rollback()
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		log.Fatal(err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	return nil
+}
+
 func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlResult(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Result, error)) (*sql.Result, error) {
 

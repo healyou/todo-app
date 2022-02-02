@@ -10,6 +10,16 @@ type JdbcTemplateImplTest struct {
 	context context.Context
 }
 
+func (jdbcTemplate *JdbcTemplateImplTest) ExecuteInTransaction(txFunc func(context context.Context, DB *sql.Tx) error) error {
+	err := txFunc(jdbcTemplate.context, jdbcTemplate.DB)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (jdbcTemplate *JdbcTemplateImplTest) InTransactionForSqlResult(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Result, error)) (*sql.Result, error) {
 

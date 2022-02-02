@@ -40,12 +40,12 @@ func getAlbums(c *gin.Context) {
 
 func getNotes(c *gin.Context) {
 	var notes = []entity.Note{
-		{Id: 1, NoteGuid: "not guid", Version: 1,
-			Text: "text", UserId: 1, Deleted: false, Archive: false,
-			NoteFiles: []entity.NoteFile{
-				{Id: 1, NoteId: 1, Guid: "note file guid", Filename: "filename"},
-			},
-		},
+		//{Id: 1, NoteGuid: "not guid", Version: 1,
+		//	Text: "text", UserId: 1, Deleted: false, Archive: false,
+		//	NoteFiles: []entity.NoteFile{
+		//		{Id: 1, NoteId: 1, Guid: "note file guid", Filename: "filename"},
+		//	},
+		//},
 	}
 	c.IndentedJSON(http.StatusOK, notes)
 }
