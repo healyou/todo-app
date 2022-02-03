@@ -7,10 +7,12 @@ import (
 	"github.com/google/uuid"
 	"log"
 	"todo/src/db"
+	"todo/src/filestorage"
 )
 
 type NoteServiceImpl struct {
 	JdbcTemplate db.JdbcTemplate
+	MinioService filestorage.MinioService
 }
 
 func (service *NoteServiceImpl) Test() error {
@@ -85,7 +87,7 @@ func (service *NoteServiceImpl) createNote(note *Note) (*int64, error) {
 			if note.NoteFiles != nil && len(note.NoteFiles) > 0 {
 				for i := 0; i < len(note.NoteFiles); i++ {
 					file := note.NoteFiles[i]
-					err := createNoteFile(DB, ctx, &file, *createdNoteId)
+					err := service.createNoteFile(DB, ctx, &file, *createdNoteId)
 					if err != nil {
 						return err
 					}
@@ -102,10 +104,20 @@ func (service *NoteServiceImpl) createNote(note *Note) (*int64, error) {
 	}
 }
 
-func createNoteFile(DB *sql.Tx, ctx context.Context, file *NoteFile, noteId int64) error {
-	// TODO сохранение даты в minio, если есть
+func (service *NoteServiceImpl) createNoteFile(DB *sql.Tx, ctx context.Context, file *NoteFile, noteId int64) error {
+	if file.Data == nil {
+		return errors.New("нет данных файла для сохранения")
+	}
+	if file.Filename == nil {
+		return errors.New("не указано имя файла")
+	}
+
 	file.Guid = new(string)
-	*file.Guid = uuid.New().String()
+	saveFileGuid, err := service.MinioService.SaveFile(file.Data, *file.Filename)
+	if err != nil {
+		return err
+	}
+	file.Guid = saveFileGuid
 
 	insertFileSql :=
 		"INSERT INTO note_file (note_id, file_guid, filename) " +
@@ -158,7 +170,7 @@ func (service *NoteServiceImpl) GetNoteByGuid(noteGuid string) (*Note, error) {
 				return err
 			}
 
-			note.NoteFiles, err = getNoteFilesByNoteId(DB, ctx, *note.Id)
+			note.NoteFiles, err = service.getNoteFilesByNoteId(DB, ctx, *note.Id)
 			if err != nil {
 				return err
 			}
@@ -189,7 +201,7 @@ func (service *NoteServiceImpl) GetNote(id int64) (*Note, error) {
 				return err
 			}
 
-			note.NoteFiles, err = getNoteFilesByNoteId(DB, ctx, *note.Id)
+			note.NoteFiles, err = service.getNoteFilesByNoteId(DB, ctx, *note.Id)
 			if err != nil {
 				return err
 			}
@@ -204,8 +216,7 @@ func (service *NoteServiceImpl) GetNote(id int64) (*Note, error) {
 	}
 }
 
-func getNoteFilesByNoteId(DB *sql.Tx, ctx context.Context, noteId int64) ([]NoteFile, error) {
-	// TODO - получение даты с minio
+func (service *NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Context, noteId int64) ([]NoteFile, error) {
 	noteFilesSql :=
 		"select * from note_file where note_id in (" +
 			"    select id from note where id = ?" +
@@ -223,6 +234,15 @@ func getNoteFilesByNoteId(DB *sql.Tx, ctx context.Context, noteId int64) ([]Note
 	noteFiles, err := MapNoteFiles(noteFilesResult)
 	if err != nil {
 		return nil, err
+	}
+
+	for i := 0; i < len(noteFiles); i++ {
+		file := &noteFiles[i]
+		data, err := service.MinioService.GetFile(*file.Guid)
+		if err != nil {
+			return nil, err
+		}
+		file.Data = data
 	}
 
 	return noteFiles, nil

@@ -50,6 +50,7 @@ func createNewRandomNoteFile() *entity.NoteFile {
 	randomUuid := uuid.New().String()
 	file := &entity.NoteFile{
 		Filename: &randomUuid,
+		Data:     []byte{},
 	}
 	return file
 }

@@ -20,10 +20,14 @@ func TestGgWp(t *testing.T) {
 }
 
 func TestSaveNewNoteWithData(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
 	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
 		savedNote := CreateNewRandomNote()
 
-		var noteService = entity.NoteServiceImpl{JdbcTemplate: &testJdbcTemplate}
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
 		result, err := noteService.SaveNote(savedNote)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
@@ -52,6 +56,7 @@ func TestSaveNewNoteWithData(t *testing.T) {
 			expectedFile := savedNote.NoteFiles[i]
 			assert.NotNil(t, createdFile.Id)
 			assert.NotNil(t, createdFile.Guid)
+			assert.NotNil(t, createdFile.Data)
 			assert.Equal(t, *createdFile.NoteId, *createdNote.Id)
 			assert.Equal(t, *createdFile.Filename, *expectedFile.Filename)
 		}
@@ -60,8 +65,12 @@ func TestSaveNewNoteWithData(t *testing.T) {
 }
 
 func TestGetNote(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
 	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{JdbcTemplate: &testJdbcTemplate}
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
 		result, err := noteService.GetNote(1)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
@@ -81,10 +90,14 @@ func TestGetNote(t *testing.T) {
 }
 
 func TestGetNoteByNoteGuid(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
 	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
 		expectedNote := GetNoteWithMaxVersion()
 
-		var noteService = entity.NoteServiceImpl{JdbcTemplate: &testJdbcTemplate}
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
 		result, err := noteService.GetNoteByGuid(*expectedNote.NoteGuid)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)

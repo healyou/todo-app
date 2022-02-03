@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"todo/src/utils"
 )
 
 func ExecuteTestRollbackTransaction(
 	t *testing.T, txFunc func(jdbcTemplate JdbcTemplateImplTest)) {
 
-	db, err := sql.Open("mysql", "mysql:mysql@tcp(127.0.0.1:3306)/todo?parseTime=true")
+	db, err := sql.Open(utils.MySqlDriverName, utils.MySqlDataSource)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}

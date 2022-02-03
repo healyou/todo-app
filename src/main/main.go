@@ -1,12 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"fmt"
-	"github.com/gabriel-vasile/mimetype"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
@@ -14,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"todo/src/entity"
+	"todo/src/filestorage"
+	"todo/src/utils"
 )
 
 //go get github.com/minio/minio-go/v7@v7.0.21
@@ -51,20 +51,21 @@ func getNotes(c *gin.Context) {
 }
 
 func main() {
-	router := gin.Default()
-	router.GET("/albums", getAlbums)
-	router.GET("/getNotes", getNotes)
-
-	err := router.Run(":8222")
-	if err != nil {
-		return
-	}
+	minioExample()
+	//router := gin.Default()
+	//router.GET("/albums", getAlbums)
+	//router.GET("/getNotes", getNotes)
+	//
+	//err := router.Run(":8222")
+	//if err != nil {
+	//	return
+	//}
 }
 
 func minioExample() {
-	endpoint := "localhost:9000"
-	accessKeyID := "minio"
-	secretAccessKey := "miniopsw"
+	endpoint := utils.MinioEndpoint
+	accessKeyID := utils.MinioAccessKey
+	secretAccessKey := utils.MinioSecretKey
 
 	// Initialize minio client object.
 	minioClient, err := minio.New(endpoint, &minio.Options{
@@ -75,7 +76,6 @@ func minioExample() {
 		log.Fatalln(err)
 	}
 
-	bucketName := "todo-app-bucket"
 	ctx := context.Background()
 	defer ctx.Done()
 	buckets, err := minioClient.ListBuckets(ctx)
@@ -88,7 +88,6 @@ func minioExample() {
 	}
 
 	// Upload the zip file
-	uuidWithHyphen := uuid.New().String()
 	fileName := "Screenshot_580.png"
 	filePath := "C:\\Users\\lappi\\Desktop\\Screenshot_580.png"
 
@@ -97,7 +96,6 @@ func minioExample() {
 		log.Fatalln(err)
 		return
 	}
-	mtype, err := mimetype.DetectFile(filePath)
 	defer open.Close()
 	stat, err := open.Stat()
 	if err != nil {
@@ -105,37 +103,40 @@ func minioExample() {
 		return
 	}
 
-	userMetaData := map[string]string{
-		"Filename": fileName,
-	}
-	options := minio.PutObjectOptions{
-		ContentType:  mtype.String(),
-		UserMetadata: userMetaData,
-	}
-	info, err := minioClient.PutObject(ctx, bucketName, uuidWithHyphen, open, stat.Size(), options)
+	buf := new(bytes.Buffer)
+	size, err := buf.ReadFrom(open)
 	if err != nil {
 		log.Fatalln(err)
 		return
 	}
-	log.Printf("Successfully uploaded %s of size %d\n", fileName, info.Size)
+	if size != stat.Size() {
+		log.Fatalln(err)
+		return
+	}
 
-	object, err := minioClient.GetObject(context.Background(), bucketName, uuidWithHyphen, minio.GetObjectOptions{})
+	service := filestorage.MinioServiceImpl{Client: minioClient}
+	saveFileUuid, err := service.SaveFile(buf.Bytes(), fileName)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalln(err)
 		return
 	}
-	objectInfo, err := object.Stat()
+	log.Printf("Successfully uploaded %s of size %d\n", fileName, len(buf.Bytes()))
+
+	data, err := service.GetFile(*saveFileUuid)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+	log.Printf("Successfully get %s of size %d\n", fileName, len(buf.Bytes()))
+
+	name := fileName
+	localFile, err := os.Create("C:\\Users\\lappi\\Desktop\\" + *saveFileUuid + name)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	name := objectInfo.UserMetadata["Filename"]
-	localFile, err := os.Create("C:\\Users\\lappi\\Desktop\\" + uuidWithHyphen + name)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	if _, err = io.Copy(localFile, object); err != nil {
+
+	if _, err = io.Copy(localFile, bytes.NewReader(data)); err != nil {
 		log.Println(err)
 		return
 	}
