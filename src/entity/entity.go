@@ -19,6 +19,7 @@ type Note struct {
 	CreateDate *time.Time `json:"create_date"`
 	Deleted    *bool      `json:"deleted"`
 	Archive    *bool      `json:"archive"`
+	Actual     *bool      `json:"actual"`
 	NoteFiles  []NoteFile `json:"note_files"`
 }
 

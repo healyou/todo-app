@@ -70,3 +70,8 @@ func (service MinioServiceImpl) GetFile(fileUuid string) ([]byte, error) {
 
 	return dataBuffer.Bytes(), err
 }
+
+func (service MinioServiceImpl) RemoveFile(fileUuid string) (error) {
+	panic("не реализовано")
+	// TODO
+}

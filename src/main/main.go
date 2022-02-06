@@ -3,10 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
 	"log"
 	"net/http"
@@ -14,6 +10,11 @@ import (
 	"todo/src/entity"
 	"todo/src/filestorage"
 	"todo/src/utils"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 //go get github.com/minio/minio-go/v7@v7.0.21
@@ -51,15 +52,15 @@ func getNotes(c *gin.Context) {
 }
 
 func main() {
-	minioExample()
-	//router := gin.Default()
-	//router.GET("/albums", getAlbums)
-	//router.GET("/getNotes", getNotes)
-	//
-	//err := router.Run(":8222")
-	//if err != nil {
-	//	return
-	//}
+	// minioExample()
+	router := gin.Default()
+	router.GET("/albums", getAlbums)
+	router.GET("/getNotes", getNotes)
+
+	err := router.Run(":8222")
+	if err != nil {
+		return
+	}
 }
 
 func minioExample() {

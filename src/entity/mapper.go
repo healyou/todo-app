@@ -9,14 +9,16 @@ func MapNote(noteRow *sql.Row) (*Note, error) {
 
 	var deleted int8
 	var archive int8
+	var actual int8
 	err := noteRow.Scan(
 		&note.Id, &note.NoteGuid, &note.Version, &note.Text, &note.UserId, &note.CreateDate, &deleted,
-		&archive)
+		&archive, &actual)
 	if err != nil {
 		return nil, err
 	}
 	note.Deleted = new(bool)
 	note.Archive = new(bool)
+	note.Actual = new(bool)
 	if deleted == 1 {
 		*note.Deleted = true
 	} else {
@@ -26,6 +28,11 @@ func MapNote(noteRow *sql.Row) (*Note, error) {
 		*note.Archive = true
 	} else {
 		*note.Archive = false
+	}
+	if actual == 1 {
+		*note.Actual = true
+	} else {
+		*note.Actual = false
 	}
 
 	return &note, nil

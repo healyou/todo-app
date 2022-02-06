@@ -15,3 +15,8 @@ func (service MinioServiceImplTest) SaveFile(data []byte, filename string) (*str
 func (service MinioServiceImplTest) GetFile(fileUuid string) ([]byte, error) {
 	return []byte{}, nil
 }
+
+func (service MinioServiceImplTest) RemoveFile(fileUuid string) (error) {
+	panic("не реализовано")
+	// TODO
+}

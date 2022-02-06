@@ -1,10 +1,11 @@
 package test
 
 import (
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"todo/src/entity"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/stretchr/testify/assert"
 )
 
 /* Тест */
@@ -112,6 +113,56 @@ func TestGetNoteByNoteGuid(t *testing.T) {
 		assert.Equal(t, *result.Deleted, *result.Deleted)
 		assert.Equal(t, *result.Archive, *result.Archive)
 		assert.NotNil(t, result.NoteFiles)
+	}
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+func TestUpdateNote(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+		
+		noteId, err := noteService.SaveNote(CreateNewRandomNote())
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+		note, err := noteService.GetNote(*noteId)
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+
+		/* Обновляем запись */
+		*note.Text = "updatedText"
+		updatedfile := note.NoteFiles[1]
+		updatedfile.Data = []byte{}
+		note.NoteFiles = []entity.NoteFile{
+			*createNewRandomNoteFile(),
+			updatedfile,
+		}
+		savedNoteId, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+
+		/* Смотрим, что сохранилось */
+		updatedNote, err := noteService.GetNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+
+		assert.Equal(t, *savedNoteId, *updatedNote.Id)
+		assert.Equal(t, *note.NoteGuid, *updatedNote.NoteGuid)
+		assert.Equal(t, *note.Version + 1, *updatedNote.Version)
+		assert.Equal(t, *note.Text, *updatedNote.Text)
+		assert.Equal(t, *note.UserId, *updatedNote.UserId)
+		assert.Equal(t, *note.Deleted, *updatedNote.Deleted)
+		assert.Equal(t, *note.Archive, *updatedNote.Archive)
+		assert.Equal(t, *updatedNote.Actual, true)
+		assert.NotNil(t, updatedNote.NoteFiles)
+		assert.Equal(t, 2, len(updatedNote.NoteFiles))
 	}
 	ExecuteTestRollbackTransaction(t, txFunc)
 }

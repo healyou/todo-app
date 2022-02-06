@@ -1,0 +1,3 @@
+ALTER USER 'mysql' IDENTIFIED BY 'mysql';
+GRANT SUPER ON *.* TO 'mysql'@'%';
+FLUSH PRIVILEGES;

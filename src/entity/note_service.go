@@ -8,4 +8,8 @@ type NoteService interface {
 	GetNote(id int64) (*Note, error)
 
 	GetNoteByGuid(noteGuid string) (*Note, error)
+
+	DownNoteVersion(noteGuid string) error
+
+	UpNoteVersion(noteGuid string) error
 }
