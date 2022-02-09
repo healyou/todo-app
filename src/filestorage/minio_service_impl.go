@@ -72,6 +72,7 @@ func (service MinioServiceImpl) GetFile(fileUuid string) ([]byte, error) {
 }
 
 func (service MinioServiceImpl) RemoveFile(fileUuid string) (error) {
-	panic("не реализовано")
-	// TODO
+	ctx := context.Background()
+	defer ctx.Done()
+	return service.Client.RemoveObject(ctx, MinioBucketName, fileUuid, minio.RemoveObjectOptions{})
 }

@@ -17,6 +17,5 @@ func (service MinioServiceImplTest) GetFile(fileUuid string) ([]byte, error) {
 }
 
 func (service MinioServiceImplTest) RemoveFile(fileUuid string) (error) {
-	panic("не реализовано")
-	// TODO
+	return nil
 }

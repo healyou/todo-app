@@ -4,52 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 	"todo/src/db"
 	"todo/src/filestorage"
-
-	"github.com/google/uuid"
 )
 
 type NoteServiceImpl struct {
 	JdbcTemplate db.JdbcTemplate
 	MinioService filestorage.MinioService
-}
-
-func (service *NoteServiceImpl) Test() error {
-	sqlFunc := func(context context.Context, DB *sql.Tx) (*sql.Result, error) {
-		sqlCount := "select count(*) from note"
-		var cnt int
-		err := DB.QueryRowContext(context, sqlCount).Scan(&cnt)
-		if err != nil {
-			return nil, err
-		}
-
-		newUuid := uuid.New().String()
-		sqlInsert := "INSERT INTO note (note_guid, text, user_id)\n VALUES ('" + newUuid + "', 'note text1', 1)"
-		result, err := DB.ExecContext(context, sqlInsert)
-		if err != nil {
-			return nil, err
-		}
-
-		sqlCount = "select count(*) from note"
-		err = DB.QueryRowContext(context, sqlCount).Scan(&cnt)
-		if err != nil {
-			return nil, err
-		}
-
-		return &result, nil
-	}
-
-	result, err := service.JdbcTemplate.InTransactionForSqlResult(sqlFunc)
-	if err != nil {
-		return err
-	}
-	if result != nil {
-		log.Println(result)
-	}
-
-	return nil
 }
 
 func (service *NoteServiceImpl) SaveNote(note *Note) (*int64, error) {
@@ -139,7 +100,7 @@ func (service *NoteServiceImpl) updateNote(note *Note) (*int64, error) {
 
 	err := service.JdbcTemplate.ExecuteInTransaction(
 		func(ctx context.Context, DB *sql.Tx) error {
-			prevNote, err := service.GetNoteByGuid(*note.NoteGuid)
+			prevNote, err := service.GetActualNoteByGuid(*note.NoteGuid)
 			if err != nil {
 				return err
 			}
@@ -162,14 +123,14 @@ func (service *NoteServiceImpl) updateNote(note *Note) (*int64, error) {
 				if err != nil {
 					return err
 				}
-				err = removeNoteFiles(DB, ctx, newNoteId, removedFileIds)
+				err = service.removeNoteFiles(DB, ctx, newNoteId, removedFileIds)
 				if err != nil {
 					return err
 				}
 
 				/* Новые файлы */
 				var newFiles []NoteFile = getNewFiles(note.NoteFiles)
-				for i:=0; i < len(newFiles); i++ {
+				for i := 0; i < len(newFiles); i++ {
 					file := newFiles[i]
 					err := service.createNoteFile(DB, ctx, &file, *newNoteId)
 					if err != nil {
@@ -179,7 +140,7 @@ func (service *NoteServiceImpl) updateNote(note *Note) (*int64, error) {
 
 				/* Файлы с обновлённым контентом */
 				var updatedFiles []NoteFile = getUpdatedFiles(note.NoteFiles)
-				for i:=0; i < len(updatedFiles); i++ {
+				for i := 0; i < len(updatedFiles); i++ {
 					file := updatedFiles[i]
 					err := service.updateNoteFile(DB, ctx, &file, *newNoteId)
 					if err != nil {
@@ -207,48 +168,59 @@ func (service *NoteServiceImpl) updateNoteFile(DB *sql.Tx, ctx context.Context, 
 		return err
 	}
 
-	updateFileSql :="update note_file set filename = ?, file_guid = ?, note_id = ? where id = ?"
+	updateFileSql := "update note_file set filename = ?, file_guid = ?, note_id = ? where id = ?"
 	_, err = DB.ExecContext(ctx, updateFileSql, *noteFile.Filename, fileGuid, newNoteId, noteFile.Id)
 	return err
 }
 
-func getUpdatedFiles(noteFile []NoteFile) ([]NoteFile) {
+func getUpdatedFiles(noteFile []NoteFile) []NoteFile {
 	var updatedFiles []NoteFile
 
-	for i:=0; i < len(noteFile); i++ {
+	for i := 0; i < len(noteFile); i++ {
 		file := noteFile[i]
 		if file.Id != nil && file.Data != nil {
 			updatedFiles = append(updatedFiles, file)
 		}
 	}
-	
+
 	return updatedFiles
 }
 
-func getNewFiles(noteFiles []NoteFile) ([]NoteFile) {
+func getNewFiles(noteFiles []NoteFile) []NoteFile {
 	var newFiles []NoteFile
 
-	for i:=0; i < len(noteFiles); i++ {
+	for i := 0; i < len(noteFiles); i++ {
 		file := noteFiles[i]
 		if file.Id == nil {
 			newFiles = append(newFiles, file)
 		}
 	}
-	
+
 	return newFiles
 }
 
-func removeNoteFiles(DB *sql.Tx, ctx context.Context, newNoteId *int64, removedFileIds []int64) error {
+func (service *NoteServiceImpl) removeNoteFiles(DB *sql.Tx, ctx context.Context, newNoteId *int64, removedFileIds []int64) error {
 	if len(removedFileIds) == 1 {
 		return nil
 	}
-	
 
-	for i:=0; i < len(removedFileIds); i++ {
+	for i := 0; i < len(removedFileIds); i++ {
+		fileGuidSql := "select file_guid from note_file where note_id = ? and id = ?"
+		row := DB.QueryRowContext(ctx, fileGuidSql, *newNoteId, removedFileIds[i])
+		if row.Err() != nil {
+			return row.Err()
+		}
+		var fileGuid string
+		row.Scan(&fileGuid)
+
 		removeFileSql := "delete from note_file where note_id = ? and id = ?"
 		_, err := DB.ExecContext(ctx, removeFileSql, *newNoteId, removedFileIds[i])
 		if err != nil {
-			// TODO удаление из minio
+			return err
+		}
+
+		err = service.MinioService.RemoveFile(fileGuid)
+		if err != nil {
 			return err
 		}
 	}
@@ -274,14 +246,14 @@ func getRemovedFileIds(DB *sql.Tx, ctx context.Context, newNoteId *int64, noteFi
 
 	var removedFileIds []int64
 	var noteFileIds []int64
-	for i:=0; i < len(noteFiles); i++ {
+	for i := 0; i < len(noteFiles); i++ {
 		file := noteFiles[i]
 		if file.Id != nil {
 			noteFileIds = append(noteFileIds, *file.Id)
 		}
 	}
 
-	for i:=0; i < len(currentDbFileIds); i++ {
+	for i := 0; i < len(currentDbFileIds); i++ {
 		dbFileId := currentDbFileIds[i]
 		if !intInSlice(dbFileId, noteFileIds) {
 			removedFileIds = append(removedFileIds, dbFileId)
@@ -292,12 +264,12 @@ func getRemovedFileIds(DB *sql.Tx, ctx context.Context, newNoteId *int64, noteFi
 }
 
 func intInSlice(a int64, list []int64) bool {
-    for b := range list {
-        if list[b] == a {
-            return true
-        }
-    }
-    return false
+	for b := range list {
+		if list[b] == a {
+			return true
+		}
+	}
+	return false
 }
 
 func updateNoteFilesNoteId(DB *sql.Tx, ctx context.Context, prevNoteId int64, newNoteId int64) error {
@@ -340,7 +312,7 @@ func setPrevVersionNotActual(DB *sql.Tx, ctx context.Context, noteGuid string) e
 	return nil
 }
 
-func (service *NoteServiceImpl) GetNoteByGuid(noteGuid string) (*Note, error) {
+func (service *NoteServiceImpl) GetActualNoteByGuid(noteGuid string) (*Note, error) {
 	var note *Note
 
 	err := service.JdbcTemplate.ExecuteInTransaction(
@@ -435,8 +407,40 @@ func (service *NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Con
 }
 
 func (service *NoteServiceImpl) DownNoteVersion(noteGuid string) error {
-	// TODO
-	return errors.New("не реализовано")
+	return service.JdbcTemplate.ExecuteInTransaction(
+		func(ctx context.Context, DB *sql.Tx) error {
+			currentNoteVersionSql := "select version as currentNoteVersion from note where note_guid = ? and actual = 1"
+			row := DB.QueryRowContext(ctx, currentNoteVersionSql, noteGuid)
+			if row.Err() != nil {
+				return row.Err()
+			}
+			var currentNoteVersion int8
+			row.Scan(&currentNoteVersion)
+
+			if currentNoteVersion > 0 {
+				setNoteNotActualSql := "update note set actual = 0 where note_guid = ? and actual = 1"
+				_, err := DB.ExecContext(ctx, setNoteNotActualSql, noteGuid)
+				if err != nil {
+					return err
+				}
+
+				setPrevNoteActualSql := "update note set actual = 1 where note_guid = ? and version = ?"
+				_, err = DB.ExecContext(ctx, setPrevNoteActualSql, noteGuid, currentNoteVersion-1)
+				if err != nil {
+					return err
+				}
+
+				updateNoteFileNoteIdSql := "update note_file set note_id = (select id from note where note_guid = ? and version = ?) where note_id = (select id from note where note_guid = ? and version = ?)"
+				_, err = DB.ExecContext(ctx, updateNoteFileNoteIdSql, noteGuid, currentNoteVersion-1, noteGuid, currentNoteVersion)
+				if err != nil {
+					return err
+				}
+			} else {
+				return errors.New("нельзя уменьшить версию note")
+			}
+
+			return nil
+		})
 }
 
 func (service *NoteServiceImpl) UpNoteVersion(noteGuid string) error {

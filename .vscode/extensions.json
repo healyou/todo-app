@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "ms-azuretools.vscode-docker",
+        "mhutchie.git-graph",
+        "golang.go",
+        "ms-vscode-remote.remote-containers",
+        "Gruntfuggly.todo-tree"
+    ]
+}

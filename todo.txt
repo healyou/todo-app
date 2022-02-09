@@ -1,6 +1,10 @@
 Задачи:
-TODO - добавить рекомендации для vscode
-TODO - реализация TODO
+1) TODO получение note для юзера
+2) TODO - писать rest
+3) TODO - сделать полную сборку приложения с проставлением версии
+- unit тесты
+- integration тесты
+- запуск на dev, prod
 
  go get github.com/go-sql-driver/mysql@v1.6.0
  go get github.com/minio/minio-go/v7@v7.0.21

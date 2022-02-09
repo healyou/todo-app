@@ -141,4 +141,10 @@ func minioExample() {
 		log.Println(err)
 		return
 	}
+
+	err = service.RemoveFile(*saveFileUuid)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

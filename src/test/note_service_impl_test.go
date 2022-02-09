@@ -8,18 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/* Тест */
-func TestGgWp(t *testing.T) {
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{JdbcTemplate: &testJdbcTemplate}
-		err := noteService.Test()
-		if err != nil {
-			t.Errorf("error was not expected while test method: %s", err)
-		}
-	}
-	ExecuteTestRollbackTransaction(t, txFunc)
-}
-
 func TestSaveNewNoteWithData(t *testing.T) {
 	minioServiceImplTest := MinioServiceImplTest{}
 
@@ -99,7 +87,7 @@ func TestGetNoteByNoteGuid(t *testing.T) {
 		var noteService = entity.NoteServiceImpl{
 			JdbcTemplate: &testJdbcTemplate,
 			MinioService: &minioServiceImplTest}
-		result, err := noteService.GetNoteByGuid(*expectedNote.NoteGuid)
+		result, err := noteService.GetActualNoteByGuid(*expectedNote.NoteGuid)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
 		}
@@ -148,7 +136,7 @@ func TestUpdateNote(t *testing.T) {
 		}
 
 		/* Смотрим, что сохранилось */
-		updatedNote, err := noteService.GetNoteByGuid(*note.NoteGuid)
+		updatedNote, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
 		}
@@ -164,5 +152,76 @@ func TestUpdateNote(t *testing.T) {
 		assert.NotNil(t, updatedNote.NoteFiles)
 		assert.Equal(t, 2, len(updatedNote.NoteFiles))
 	}
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+func TestDownNoteVersion(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+
+		/* Создаём 1 версию note */
+		note := CreateNewRandomNote()
+		firstNoteVersionId, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		firstNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+		firstNoteFilesCount := len(firstNoteVersion.NoteFiles)
+		
+		/* Создаём 2 версию note */
+		*firstNoteVersion.Text = "NOTE 2 VERSION TEXT"
+		secondNoteVersionId, err := noteService.SaveNote(firstNoteVersion)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		secondNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+		firstNoteVersion, err = noteService.GetNote(*firstNoteVersionId)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		assert.NotEqual(t, *firstNoteVersionId, secondNoteVersionId)
+		assert.NotEqual(t, *firstNoteVersion.Text, *secondNoteVersion.Text)
+		assert.Equal(t, *secondNoteVersionId, *secondNoteVersion.Id)
+		assert.Equal(t, *firstNoteVersion.NoteGuid, *secondNoteVersion.NoteGuid)
+		assert.Equal(t, *note.NoteGuid, *secondNoteVersion.NoteGuid)
+
+		/* уменьшаем версию note */
+		err = noteService.DownNoteVersion(*secondNoteVersion.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось уменьшить версию note: %s", err)
+		}
+		downGradeNote, err := noteService.GetActualNoteByGuid(*secondNoteVersion.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* Проверяем актуальность данных c первой версией */
+		assert.Equal(t, *downGradeNote.NoteGuid, *note.NoteGuid)
+		assert.Equal(t, *downGradeNote.Id, *firstNoteVersion.Id)
+		assert.Equal(t, *downGradeNote.Text, *firstNoteVersion.Text)
+		assert.Equal(t, *downGradeNote.Version, *firstNoteVersion.Version)
+		assert.Equal(t, *downGradeNote.Archive, *firstNoteVersion.Archive)
+		assert.Equal(t, *downGradeNote.Deleted, *firstNoteVersion.Deleted)
+		assert.Equal(t, *downGradeNote.CreateDate, *firstNoteVersion.CreateDate)
+		assert.Equal(t, *downGradeNote.NoteGuid, *firstNoteVersion.NoteGuid)
+		assert.Equal(t, *downGradeNote.UserId, *firstNoteVersion.UserId)
+		assert.Equal(t, firstNoteFilesCount, len(downGradeNote.NoteFiles))
+		assert.True(t, *downGradeNote.Actual)
+		/* Проверяем, что значения не равны второй версии note */
+		assert.NotEqual(t, *downGradeNote.Text, *secondNoteVersion.Text)
+		assert.NotEqual(t, *downGradeNote.Version, *secondNoteVersion.Version)
+	}
+
 	ExecuteTestRollbackTransaction(t, txFunc)
 }
