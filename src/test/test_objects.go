@@ -1,22 +1,25 @@
 package test
 
 import (
-	"github.com/google/uuid"
 	"todo/src/entity"
+
+	"github.com/google/uuid"
 )
 
 func GetNoteWithMaxVersion() *entity.Note {
 	note := &entity.Note{
-		NoteGuid: new(string),
-		Version:  new(int8),
-		Text:     new(string),
-		UserId:   new(int64),
-		Deleted:  new(bool),
-		Archive:  new(bool),
+		NoteGuid:          new(string),
+		Version:           new(int8),
+		Text:              new(string),
+		PrevNoteVersionId: new(int64),
+		UserId:            new(int64),
+		Deleted:           new(bool),
+		Archive:           new(bool),
 	}
 	*note.NoteGuid = "not guid1"
 	*note.Version = 1
 	*note.Text = "note text1_2"
+	*note.PrevNoteVersionId = 1
 	*note.UserId = 1
 	*note.Deleted = false
 	*note.Archive = false

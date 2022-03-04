@@ -11,8 +11,8 @@ func MapNote(noteRow *sql.Row) (*Note, error) {
 	var archive int8
 	var actual int8
 	err := noteRow.Scan(
-		&note.Id, &note.NoteGuid, &note.Version, &note.Text, &note.UserId, &note.CreateDate, &deleted,
-		&archive, &actual)
+		&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
+		&deleted, &archive, &actual)
 	if err != nil {
 		return nil, err
 	}

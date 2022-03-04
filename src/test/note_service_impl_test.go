@@ -31,6 +31,7 @@ func TestSaveNewNoteWithData(t *testing.T) {
 		assert.Equal(t, *createdNote.Id, *result)
 		assert.Equal(t, *createdNote.NoteGuid, *savedNote.NoteGuid)
 		assert.NotNil(t, createdNote.Version)
+		assert.Nil(t, createdNote.PrevNoteVersionId)
 		assert.Equal(t, *createdNote.Text, *savedNote.Text)
 		assert.Equal(t, *createdNote.UserId, *savedNote.UserId)
 		assert.NotNil(t, createdNote.CreateDate)
@@ -69,6 +70,7 @@ func TestGetNote(t *testing.T) {
 		assert.NotNil(t, *result.NoteGuid)
 		assert.NotNil(t, *result.Version)
 		assert.NotNil(t, *result.Text)
+		assert.Nil(t, result.PrevNoteVersionId)
 		assert.NotNil(t, *result.UserId)
 		assert.NotNil(t, *result.CreateDate)
 		assert.NotNil(t, *result.Deleted)
@@ -97,6 +99,7 @@ func TestGetNoteByNoteGuid(t *testing.T) {
 		assert.Equal(t, *result.Version, *result.Version)
 		assert.Equal(t, *result.Text, *result.Text)
 		assert.Equal(t, *result.UserId, *result.UserId)
+		assert.NotNil(t, *result.PrevNoteVersionId)
 		assert.NotNil(t, *result.CreateDate)
 		assert.Equal(t, *result.Deleted, *result.Deleted)
 		assert.Equal(t, *result.Archive, *result.Archive)
@@ -112,7 +115,7 @@ func TestUpdateNote(t *testing.T) {
 		var noteService = entity.NoteServiceImpl{
 			JdbcTemplate: &testJdbcTemplate,
 			MinioService: &minioServiceImplTest}
-		
+
 		noteId, err := noteService.SaveNote(CreateNewRandomNote())
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
@@ -143,13 +146,14 @@ func TestUpdateNote(t *testing.T) {
 
 		assert.Equal(t, *savedNoteId, *updatedNote.Id)
 		assert.Equal(t, *note.NoteGuid, *updatedNote.NoteGuid)
-		assert.Equal(t, *note.Version + 1, *updatedNote.Version)
+		assert.Equal(t, *note.Version+1, *updatedNote.Version)
 		assert.Equal(t, *note.Text, *updatedNote.Text)
 		assert.Equal(t, *note.UserId, *updatedNote.UserId)
 		assert.Equal(t, *note.Deleted, *updatedNote.Deleted)
 		assert.Equal(t, *note.Archive, *updatedNote.Archive)
 		assert.Equal(t, *updatedNote.Actual, true)
 		assert.NotNil(t, updatedNote.NoteFiles)
+		assert.Equal(t, *note.Id, *updatedNote.PrevNoteVersionId)
 		assert.Equal(t, 2, len(updatedNote.NoteFiles))
 	}
 	ExecuteTestRollbackTransaction(t, txFunc)
@@ -174,7 +178,7 @@ func TestDownNoteVersion(t *testing.T) {
 			t.Fatalf("не удалось получить note: %s", err)
 		}
 		firstNoteFilesCount := len(firstNoteVersion.NoteFiles)
-		
+
 		/* Создаём 2 версию note */
 		*firstNoteVersion.Text = "NOTE 2 VERSION TEXT"
 		secondNoteVersionId, err := noteService.SaveNote(firstNoteVersion)
@@ -192,6 +196,7 @@ func TestDownNoteVersion(t *testing.T) {
 
 		assert.NotEqual(t, *firstNoteVersionId, secondNoteVersionId)
 		assert.NotEqual(t, *firstNoteVersion.Text, *secondNoteVersion.Text)
+		assert.Equal(t, *firstNoteVersionId, *secondNoteVersion.PrevNoteVersionId)
 		assert.Equal(t, *secondNoteVersionId, *secondNoteVersion.Id)
 		assert.Equal(t, *firstNoteVersion.NoteGuid, *secondNoteVersion.NoteGuid)
 		assert.Equal(t, *note.NoteGuid, *secondNoteVersion.NoteGuid)
@@ -207,6 +212,8 @@ func TestDownNoteVersion(t *testing.T) {
 		}
 
 		/* Проверяем актуальность данных c первой версией */
+		assert.Nil(t, downGradeNote.PrevNoteVersionId)
+		assert.Equal(t, downGradeNote.PrevNoteVersionId, firstNoteVersion.PrevNoteVersionId)
 		assert.Equal(t, *downGradeNote.NoteGuid, *note.NoteGuid)
 		assert.Equal(t, *downGradeNote.Id, *firstNoteVersion.Id)
 		assert.Equal(t, *downGradeNote.Text, *firstNoteVersion.Text)
@@ -223,5 +230,225 @@ func TestDownNoteVersion(t *testing.T) {
 		assert.NotEqual(t, *downGradeNote.Version, *secondNoteVersion.Version)
 	}
 
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+func TestErrorDownNewNoteVersion(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+
+		/* Создаём 1 версию note */
+		note := CreateNewRandomNote()
+		_, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		firstNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* Пытаемся уменьшить версию */
+		err = noteService.DownNoteVersion(*firstNoteVersion.NoteGuid)
+		if err == nil {
+			t.Fatalf("получилось уменьшить версию, а такого быть не должно")
+		}
+		assert.NotNil(t, err)
+	}
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+func TestErrorDoubleDownNewNoteVersion(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+
+		/* Создаём 1 версию note */
+		note := CreateNewRandomNote()
+		_, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		firstNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* Создаём вторую версию note */
+		_, err = noteService.SaveNote(firstNoteVersion)
+		if err != nil {
+			t.Fatalf("не удалось обновить note: %s", err)
+		}
+
+		/* Уменьшаем версию note */
+		err = noteService.DownNoteVersion(*firstNoteVersion.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось уменьшить версию note: %s", err)
+		}
+		
+		/* Второй раз должна быть ошибка, т.к. некуда уменьшать версию */
+		err = noteService.DownNoteVersion(*firstNoteVersion.NoteGuid)
+		if err == nil {
+			t.Fatalf("получилось уменьшить версию, а такого быть не должно")
+		}
+		assert.NotNil(t, err)
+	}
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+func TestUpNoteVersion(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+
+		/* Создаём 1 версию note */
+		note := CreateNewRandomNote()
+		firstNoteVersionId, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		firstNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+		firstNoteFilesCount := len(firstNoteVersion.NoteFiles)
+
+		/* Создаём 2 версию note */
+		*firstNoteVersion.Text = "NOTE 2 VERSION TEXT"
+		_, err = noteService.SaveNote(firstNoteVersion)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		secondNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+		firstNoteVersion, err = noteService.GetNote(*firstNoteVersionId)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* уменьшаем версию note */
+		err = noteService.DownNoteVersion(*secondNoteVersion.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось уменьшить версию note: %s", err)
+		}
+		downGradeNote, err := noteService.GetActualNoteByGuid(*secondNoteVersion.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* Поднимаем версию note обратно */
+		err = noteService.UpNoteVersion(*downGradeNote.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось увеличить версию note: %s", err)
+		}
+		upGradeNote, err := noteService.GetActualNoteByGuid(*downGradeNote.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* Проверяем, что значения полей стали снова равны предыдущей версии */
+		/* Проверяем актуальность данных c первой версией */
+		assert.Equal(t, *upGradeNote.PrevNoteVersionId, *secondNoteVersion.PrevNoteVersionId)
+		assert.Equal(t, *upGradeNote.NoteGuid, *secondNoteVersion.NoteGuid)
+		assert.Equal(t, *upGradeNote.Id, *secondNoteVersion.Id)
+		assert.Equal(t, *upGradeNote.Text, *secondNoteVersion.Text)
+		assert.Equal(t, *upGradeNote.Version, *secondNoteVersion.Version)
+		assert.Equal(t, *upGradeNote.Archive, *secondNoteVersion.Archive)
+		assert.Equal(t, *upGradeNote.Deleted, *secondNoteVersion.Deleted)
+		assert.Equal(t, *upGradeNote.CreateDate, *secondNoteVersion.CreateDate)
+		assert.Equal(t, *upGradeNote.UserId, *secondNoteVersion.UserId)
+		assert.Equal(t, firstNoteFilesCount, len(secondNoteVersion.NoteFiles))
+		assert.Equal(t, firstNoteFilesCount, len(upGradeNote.NoteFiles))
+		assert.True(t, *downGradeNote.Actual)
+	}
+
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+func TestErrorUpNewNoteVersion(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+
+		/* Создаём 1 версию note */
+		note := CreateNewRandomNote()
+		_, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		firstNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* Пытаемся увеличить версию */
+		err = noteService.UpNoteVersion(*firstNoteVersion.NoteGuid)
+		if err == nil {
+			t.Fatalf("получилось увеличить версию, а такого быть не должно")
+		}
+		assert.NotNil(t, err)
+	}
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+func TestErrorDoubleUpNewNoteVersion(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+
+		/* Создаём 1 версию note */
+		note := CreateNewRandomNote()
+		_, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		firstNoteVersion, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось получить note: %s", err)
+		}
+
+		/* Создаём вторую версию note */
+		_, err = noteService.SaveNote(firstNoteVersion)
+		if err != nil {
+			t.Fatalf("не удалось обновить note: %s", err)
+		}
+
+		/* Уменьшаем версию note */
+		err = noteService.DownNoteVersion(*firstNoteVersion.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось уменьшить версию note: %s", err)
+		}
+
+		/* Увеличиваем версию note */
+		err = noteService.UpNoteVersion(*firstNoteVersion.NoteGuid)
+		if err != nil {
+			t.Fatalf("не удалось уменьшить версию note: %s", err)
+		}
+
+		/* Пытаемся увеличить версию, но должна быть ошибка, т.к. некуда увеличивать версию */
+		err = noteService.UpNoteVersion(*firstNoteVersion.NoteGuid)
+		if err == nil {
+			t.Fatalf("получилось увеличить версию, а такого быть не должно")
+		}
+		assert.NotNil(t, err)
+	}
 	ExecuteTestRollbackTransaction(t, txFunc)
 }

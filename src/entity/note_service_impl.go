@@ -290,9 +290,9 @@ func saveNewNoteVersion(DB *sql.Tx, ctx context.Context, note *Note) (*int64, er
 		return nil, err
 	}
 
-	insertSql := "INSERT INTO note (note_guid, version, text, actual, user_id) VALUES (?, ?, ?, ?, ?)"
+	insertSql := "INSERT INTO note (prev_note_version_id, note_guid, version, text, actual, user_id) VALUES (?, ?, ?, ?, ?, ?)"
 	insertResult, err := DB.ExecContext(ctx, insertSql,
-		*note.NoteGuid, *noteMaxVersionNumber+1, *note.Text, 1, note.UserId)
+		*note.Id, *note.NoteGuid, *noteMaxVersionNumber+1, *note.Text, 1, note.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -409,29 +409,26 @@ func (service *NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Con
 func (service *NoteServiceImpl) DownNoteVersion(noteGuid string) error {
 	return service.JdbcTemplate.ExecuteInTransaction(
 		func(ctx context.Context, DB *sql.Tx) error {
-			currentNoteVersionSql := "select version as currentNoteVersion from note where note_guid = ? and actual = 1"
-			row := DB.QueryRowContext(ctx, currentNoteVersionSql, noteGuid)
-			if row.Err() != nil {
-				return row.Err()
+			var prevNoteVersionId, err = getPrevNoteVersionIdIfExists(ctx, DB, noteGuid)
+			if err != nil {
+				return err
 			}
-			var currentNoteVersion int8
-			row.Scan(&currentNoteVersion)
 
-			if currentNoteVersion > 0 {
+			if prevNoteVersionId != nil {
 				setNoteNotActualSql := "update note set actual = 0 where note_guid = ? and actual = 1"
 				_, err := DB.ExecContext(ctx, setNoteNotActualSql, noteGuid)
 				if err != nil {
 					return err
 				}
 
-				setPrevNoteActualSql := "update note set actual = 1 where note_guid = ? and version = ?"
-				_, err = DB.ExecContext(ctx, setPrevNoteActualSql, noteGuid, currentNoteVersion-1)
+				setPrevNoteActualSql := "update note set actual = 1 where note_guid = ? and id = ?"
+				_, err = DB.ExecContext(ctx, setPrevNoteActualSql, noteGuid, *prevNoteVersionId)
 				if err != nil {
 					return err
 				}
 
-				updateNoteFileNoteIdSql := "update note_file set note_id = (select id from note where note_guid = ? and version = ?) where note_id = (select id from note where note_guid = ? and version = ?)"
-				_, err = DB.ExecContext(ctx, updateNoteFileNoteIdSql, noteGuid, currentNoteVersion-1, noteGuid, currentNoteVersion)
+				updateNoteFileNoteIdSql := "update note_file set note_id = (select id from note where note_guid = ? and id = ?) where note_id = (select id from note where note_guid = ? and prev_note_version_id = ?)"
+				_, err = DB.ExecContext(ctx, updateNoteFileNoteIdSql, noteGuid, *prevNoteVersionId, noteGuid, *prevNoteVersionId)
 				if err != nil {
 					return err
 				}
@@ -444,6 +441,93 @@ func (service *NoteServiceImpl) DownNoteVersion(noteGuid string) error {
 }
 
 func (service *NoteServiceImpl) UpNoteVersion(noteGuid string) error {
-	// TODO
-	return errors.New("не реализовано")
+	return service.JdbcTemplate.ExecuteInTransaction(
+		func(ctx context.Context, DB *sql.Tx) error {
+			currentActualNoteId, err := getCurrentActualNoteIdByGuid(ctx, DB, noteGuid)
+			if err != nil {
+				return err
+			}
+			upNoteVersionId, err := getUpNoteVersionIdIfExists(ctx, DB, *currentActualNoteId)
+			if err != nil {
+				return err
+			}
+
+			if upNoteVersionId != nil {
+				setNoteNotActualSql := "update note set actual = 0 where note_guid = ? and actual = 1"
+				_, err := DB.ExecContext(ctx, setNoteNotActualSql, noteGuid)
+				if err != nil {
+					return err
+				}
+
+				setPrevNoteActualSql := "update note set actual = 1 where id = ?"
+				_, err = DB.ExecContext(ctx, setPrevNoteActualSql, *upNoteVersionId)
+				if err != nil {
+					return err
+				}
+
+				updateNoteFileNoteIdSql := "update note_file set note_id = ? where note_id = ?"
+				_, err = DB.ExecContext(ctx, updateNoteFileNoteIdSql, *upNoteVersionId, *currentActualNoteId)
+				if err != nil {
+					return err
+				}
+			} else {
+				return errors.New("нельзя увеличить версию note")
+			}
+
+			return nil
+		})
+}
+
+func getPrevNoteVersionIdIfExists(ctx context.Context, DB *sql.Tx, noteGuid string) (*int64, error) {
+	prevNoteVersionIdSql := "select prev_note_version_id from note where note_guid = ? and actual = 1"
+	row := DB.QueryRowContext(ctx, prevNoteVersionIdSql, noteGuid)
+	if row.Err() != nil {
+		return nil, row.Err()
+	}
+
+	var prevNoteVersionId *int64
+	row.Scan(&prevNoteVersionId)
+
+	return prevNoteVersionId, nil
+}
+
+/* Получить идентификатор актуальной версии note по гуиду */
+func getCurrentActualNoteIdByGuid(ctx context.Context, DB *sql.Tx, noteGuid string) (*int64, error) {
+	actualNoteIdVersionSql := "select id from note where note_guid = ? and actual = 1"
+	row := DB.QueryRowContext(ctx, actualNoteIdVersionSql, noteGuid)
+	if row.Err() != nil {
+		return nil, row.Err()
+	}
+
+	var id int64
+	row.Scan(&id)
+
+	return &id, nil
+}
+
+// func getMaxNoteVersionByGuid(ctx context.Context, DB *sql.Tx, noteGuid string) (*int8, error) {
+// 	currentNoteVersionSql := "select max(version) as maxNoteVersion from note where note_guid = ?"
+// 	row := DB.QueryRowContext(ctx, currentNoteVersionSql, noteGuid)
+// 	if row.Err() != nil {
+// 		return nil, row.Err()
+// 	}
+
+// 	var maxNoteVersion int8
+// 	row.Scan(&maxNoteVersion)
+
+// 	return &maxNoteVersion, nil
+// }
+
+/* Получить идентификатор записи для повышения версии, если такая запись есть */
+func getUpNoteVersionIdIfExists(ctx context.Context, DB *sql.Tx, noteId int64) (*int64, error) {
+	currentNoteVersionSql := "select id from note where prev_note_version_id = ? and actual = 0"
+	row := DB.QueryRowContext(ctx, currentNoteVersionSql, noteId)
+	if row.Err() != nil {
+		return nil, row.Err()
+	}
+
+	var id *int64
+	row.Scan(&id)
+
+	return id, nil
 }
