@@ -11,6 +11,6 @@ type NoteService interface {
 
 	UpNoteVersion(noteGuid string) error
 
-	// TODO добавить метод
-	// GetUserNotes(userId int64) ([]Note, error)
+	/* Получить список актуальных записей юзера */
+	GetUserActualNotes(userId int64) ([]Note, error)
 }

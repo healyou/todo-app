@@ -292,7 +292,7 @@ func TestErrorDoubleDownNewNoteVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("не удалось уменьшить версию note: %s", err)
 		}
-		
+
 		/* Второй раз должна быть ошибка, т.к. некуда уменьшать версию */
 		err = noteService.DownNoteVersion(*firstNoteVersion.NoteGuid)
 		if err == nil {
@@ -449,6 +449,52 @@ func TestErrorDoubleUpNewNoteVersion(t *testing.T) {
 			t.Fatalf("получилось увеличить версию, а такого быть не должно")
 		}
 		assert.NotNil(t, err)
+	}
+	ExecuteTestRollbackTransaction(t, txFunc)
+}
+
+
+func TestGetUserNotes(t *testing.T) {
+	minioServiceImplTest := MinioServiceImplTest{}
+
+	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+		var noteService = entity.NoteServiceImpl{
+			JdbcTemplate: &testJdbcTemplate,
+			MinioService: &minioServiceImplTest}
+
+		/* Создаём notes */
+		notes := [2]entity.Note{*CreateNewRandomNote(), *CreateNewRandomNote()}
+		userId := notes[0].UserId
+
+		for index, note := range notes {
+			noteId, err := noteService.SaveNote(&note)
+			note.Id = noteId
+			if err != nil {
+				t.Fatalf("не удалось сохранить note: %s", err)
+			}
+			notes[index] = note
+		}
+
+		/* Получаем записи */
+		userNotes, err := noteService.GetUserActualNotes(*userId)
+		if err != nil {
+			t.Fatalf("не получилось получить notes: %s", err)
+		}
+
+		/* Проверяем, что данные начитались */
+		assert.NotNil(t, userNotes)
+		assert.True(t, len(userNotes) > 0)
+		for _, savedNote := range userNotes {
+			for _, createNote := range notes {
+				if (*savedNote.Id == *createNote.Id) {
+					assert.Equal(t, len(createNote.NoteFiles), len(savedNote.NoteFiles))
+					assert.Equal(t, *userId, *savedNote.UserId)
+					assert.Equal(t, *createNote.UserId, *savedNote.UserId)
+				}
+			}
+
+			assert.Equal(t, *savedNote.Actual, true)
+		}
 	}
 	ExecuteTestRollbackTransaction(t, txFunc)
 }

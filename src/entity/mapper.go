@@ -5,16 +5,29 @@ import (
 )
 
 func MapNote(noteRow *sql.Row) (*Note, error) {
+	return mapOneNote(noteRow, nil)
+}
+
+func mapOneNote(noteRow *sql.Row, noteRows *sql.Rows) (*Note, error) {
 	var note Note
 
 	var deleted int8
 	var archive int8
 	var actual int8
-	err := noteRow.Scan(
-		&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
-		&deleted, &archive, &actual)
-	if err != nil {
-		return nil, err
+	if (noteRow != nil) {
+		err := noteRow.Scan(
+			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
+			&deleted, &archive, &actual)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := noteRows.Scan(
+			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
+			&deleted, &archive, &actual)
+		if err != nil {
+			return nil, err
+		}
 	}
 	note.Deleted = new(bool)
 	note.Archive = new(bool)
@@ -52,4 +65,18 @@ func MapNoteFiles(noteFileRows *sql.Rows) ([]NoteFile, error) {
 	}
 
 	return noteFiles, nil
+}
+
+func MapNotes(noteRows *sql.Rows) ([]Note, error) {
+	var notes []Note
+
+	for noteRows.Next() {
+		note, err := mapOneNote(nil, noteRows)
+		if err != nil {
+			return nil, err
+		}
+		notes = append(notes, *note)
+	}
+
+	return notes, nil
 }

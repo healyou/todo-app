@@ -505,19 +505,6 @@ func getCurrentActualNoteIdByGuid(ctx context.Context, DB *sql.Tx, noteGuid stri
 	return &id, nil
 }
 
-// func getMaxNoteVersionByGuid(ctx context.Context, DB *sql.Tx, noteGuid string) (*int8, error) {
-// 	currentNoteVersionSql := "select max(version) as maxNoteVersion from note where note_guid = ?"
-// 	row := DB.QueryRowContext(ctx, currentNoteVersionSql, noteGuid)
-// 	if row.Err() != nil {
-// 		return nil, row.Err()
-// 	}
-
-// 	var maxNoteVersion int8
-// 	row.Scan(&maxNoteVersion)
-
-// 	return &maxNoteVersion, nil
-// }
-
 /* Получить идентификатор записи для повышения версии, если такая запись есть */
 func getUpNoteVersionIdIfExists(ctx context.Context, DB *sql.Tx, noteId int64) (*int64, error) {
 	currentNoteVersionSql := "select id from note where prev_note_version_id = ? and actual = 0"
@@ -530,4 +517,47 @@ func getUpNoteVersionIdIfExists(ctx context.Context, DB *sql.Tx, noteId int64) (
 	row.Scan(&id)
 
 	return id, nil
+}
+
+func (service *NoteServiceImpl) GetUserActualNotes(userId int64) ([]Note, error) {
+	var notes []Note
+
+	err := service.JdbcTemplate.ExecuteInTransaction(
+		func(ctx context.Context, DB *sql.Tx) error {
+			/* Получаем список записей */
+			notesSql := "select * from note where actual = 1 and user_id = ?"
+			userNotesResult, err := DB.QueryContext(ctx, notesSql, userId)
+
+			if err != nil {
+				return err
+			}
+			defer func(userNotesResult *sql.Rows) {
+				closeError := userNotesResult.Close()
+				if closeError != nil {
+					err = closeError
+				}
+			}(userNotesResult)
+
+			notes, err = MapNotes(userNotesResult)
+			if err != nil {
+				return err
+			}
+
+			/* Получаем файлы для записей */
+			for index, note := range notes {
+				note.NoteFiles, err = service.getNoteFilesByNoteId(DB, ctx, *note.Id)
+				if err != nil {
+					return err
+				}
+				notes[index] = note
+			}
+
+			return nil
+	})
+
+	if (err != nil) {
+		return nil, err
+	}
+
+	return notes, nil
 }
