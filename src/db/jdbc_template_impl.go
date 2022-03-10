@@ -16,7 +16,7 @@ func (jdbcTemplate *JdbcTemplateImpl) ExecuteInTransaction(
 
 	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	defer func(db *sql.DB) {
@@ -27,18 +27,18 @@ func (jdbcTemplate *JdbcTemplateImpl) ExecuteInTransaction(
 	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return err
 	}
 
 	err = txFunc(ctx, tx)
 
 	if err != nil {
-		err := tx.Rollback()
-		if err != nil {
-			log.Fatal(err)
-			return err
+		var txErr = tx.Rollback()
+		if txErr != nil {
+			log.Println(txErr)
 		}
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 
@@ -66,22 +66,23 @@ func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlResult(
 	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil, err
 	}
 
 	result, err := txFunc(ctx, tx)
 
 	if err != nil {
-		err := tx.Rollback()
-		if err != nil {
-			return nil, err
+		var txErr = tx.Rollback()
+		if txErr != nil {
+			log.Println(txErr)
 		}
 		return nil, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return nil, err
 	}
 
@@ -103,22 +104,23 @@ func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlRows(
 	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil, err
 	}
 
 	result, err := txFunc(ctx, tx)
 
 	if err != nil {
-		err := tx.Rollback()
-		if err != nil {
-			return nil, err
+		var txErr = tx.Rollback()
+		if txErr != nil {
+			log.Println(txErr)
 		}
 		return nil, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return nil, err
 	}
 
@@ -140,22 +142,22 @@ func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlRow(
 	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	result, err := txFunc(ctx, tx)
 
 	if err != nil {
-		err := tx.Rollback()
-		if err != nil {
-			return nil, err
+		var txErr = tx.Rollback()
+		if txErr != nil {
+			log.Println(txErr)
 		}
 		return nil, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return nil, err
 	}
 

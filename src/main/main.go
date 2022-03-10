@@ -9,6 +9,7 @@ import (
 	"os"
 	"todo/src/entity"
 	"todo/src/filestorage"
+	"todo/src/controllers"
 	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,12 @@ func getNotes(c *gin.Context) {
 func main() {
 	// minioExample()
 	router := gin.Default()
+	router.POST("/notes/getActualNote", note_controller.GetActualNote)
+	router.POST("/notes/saveNote", note_controller.SaveNote)
+	router.POST("/notes/getUserNotes", note_controller.GetUserNotes)
+	router.POST("/notes/downNoteVersion", note_controller.DownNoteVersion)
+	router.POST("/notes/upNoteVersion", note_controller.UpNoteVersion)
+
 	router.GET("/albums", getAlbums)
 	router.GET("/getNotes", getNotes)
 

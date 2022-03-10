@@ -10,8 +10,8 @@ import (
 	"log"
 )
 
-const MinioFilenameUserOptionName = "Filename"
-const MinioBucketName = "todo-app-bucket"
+const minioFilenameUserOptionName = "Filename"
+const minioBucketName = "todo-app-bucket"
 
 type MinioServiceImpl struct {
 	Client *minio.Client
@@ -22,7 +22,7 @@ func (service MinioServiceImpl) SaveFile(data []byte, filename string) (*string,
 	mimeType := mimetype.Detect(data)
 
 	userMetaData := map[string]string{
-		MinioFilenameUserOptionName: filename,
+		minioFilenameUserOptionName: filename,
 	}
 	options := minio.PutObjectOptions{
 		ContentType:  mimeType.String(),
@@ -31,7 +31,7 @@ func (service MinioServiceImpl) SaveFile(data []byte, filename string) (*string,
 	ctx := context.Background()
 	defer ctx.Done()
 	info, err := service.Client.PutObject(
-		ctx, MinioBucketName, uuidWithHyphen, bytes.NewReader(data), int64(len(data)), options)
+		ctx, minioBucketName, uuidWithHyphen, bytes.NewReader(data), int64(len(data)), options)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (service MinioServiceImpl) GetFile(fileUuid string) ([]byte, error) {
 	ctx := context.Background()
 	defer ctx.Done()
 
-	object, err := service.Client.GetObject(ctx, MinioBucketName, fileUuid, minio.GetObjectOptions{})
+	object, err := service.Client.GetObject(ctx, minioBucketName, fileUuid, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -74,5 +74,5 @@ func (service MinioServiceImpl) GetFile(fileUuid string) ([]byte, error) {
 func (service MinioServiceImpl) RemoveFile(fileUuid string) (error) {
 	ctx := context.Background()
 	defer ctx.Done()
-	return service.Client.RemoveObject(ctx, MinioBucketName, fileUuid, minio.RemoveObjectOptions{})
+	return service.Client.RemoveObject(ctx, minioBucketName, fileUuid, minio.RemoveObjectOptions{})
 }
