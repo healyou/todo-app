@@ -14,6 +14,7 @@ type JdbcTemplateImpl struct {
 func (jdbcTemplate *JdbcTemplateImpl) ExecuteInTransaction(
 	txFunc func(context context.Context, DB *sql.Tx) error) error {
 
+	// TODO надо бы создавать коннект 1 раз
 	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
 	if err != nil {
 		log.Println(err)

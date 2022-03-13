@@ -4,28 +4,32 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"todo/src/db"
 	"todo/src/entity"
-	"todo/src/filestorage"
-	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 func SaveNote(c *gin.Context) {
-	var notes = []entity.Note{
-		//{Id: 1, NoteGuid: "not guid", Version: 1,
-		//	Text: "text", UserId: 1, Deleted: false, Archive: false,
-		//	NoteFiles: []entity.NoteFile{
-		//		{Id: 1, NoteId: 1, Guid: "note file guid", Filename: "filename"},
-		//	},
-		//},
+	var note entity.Note
+	var err = c.BindJSON(&note)
+	if err != nil {
+		log.Println(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error()})
+		return
 	}
-	// TODO добавить сохранение из json
-	// TODO тесты для gin
-	c.IndentedJSON(http.StatusOK, notes)
+
+	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
+
+	_, err = noteService.SaveNote(&note)
+	if err != nil {
+		log.Println(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"result": true})
 }
 
 func GetActualNote(c *gin.Context) {
@@ -36,13 +40,7 @@ func GetActualNote(c *gin.Context) {
 		return
 	}
 
-	var noteService, err = configureNoteService()
-	if err != nil {
-		log.Println(err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error()})
-		return
-	}
+	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
 
 	note, err := noteService.GetActualNoteByGuid(guidParam)
 	if err != nil {
@@ -69,13 +67,7 @@ func GetUserNotes(c *gin.Context) {
 		return
 	}
 
-	noteService, err := configureNoteService()
-	if err != nil {
-		log.Println(err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error()})
-		return
-	}
+	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
 
 	notes, err := noteService.GetUserActualNotes(userIdParam)
 	if err != nil {
@@ -95,15 +87,9 @@ func DownNoteVersion(c *gin.Context) {
 		return
 	}
 
-	var noteService, err = configureNoteService()
-	if err != nil {
-		log.Println(err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error()})
-		return
-	}
+	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
 
-	err = noteService.DownNoteVersion(guidParam)
+	var err = noteService.DownNoteVersion(guidParam)
 	if err != nil {
 		log.Println(err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -122,15 +108,9 @@ func UpNoteVersion(c *gin.Context) {
 		return
 	}
 
-	var noteService, err = configureNoteService()
-	if err != nil {
-		log.Println(err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error()})
-		return
-	}
+	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
 
-	err = noteService.UpNoteVersion(guidParam)
+	var err = noteService.UpNoteVersion(guidParam)
 	if err != nil {
 		log.Println(err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -139,31 +119,4 @@ func UpNoteVersion(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"result": true})
-}
-
-func configureNoteService() (*entity.NoteServiceImpl, error) {
-	var jdbcTemplate = db.JdbcTemplateImpl{
-		DriverName: utils.MySqlDriverName,
-		DbUrl:      utils.MySqlDataSource}
-
-	endpoint := utils.MinioEndpoint
-	accessKeyID := utils.MinioAccessKey
-	secretAccessKey := utils.MinioSecretKey
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: false,
-	})
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	var minioService = filestorage.MinioServiceImpl{
-		Client: minioClient}
-
-	var noteService = entity.NoteServiceImpl{
-		JdbcTemplate: &jdbcTemplate,
-		MinioService: &minioService}
-
-	return &noteService, nil
 }

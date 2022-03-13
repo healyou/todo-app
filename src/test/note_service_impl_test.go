@@ -61,12 +61,18 @@ func TestGetNote(t *testing.T) {
 		var noteService = entity.NoteServiceImpl{
 			JdbcTemplate: &testJdbcTemplate,
 			MinioService: &minioServiceImplTest}
-		result, err := noteService.GetNote(1)
+
+		noteId, err := noteService.SaveNote(CreateNewRandomNote())
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+		
+		result, err := noteService.GetNote(*noteId)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
 		}
 
-		assert.Equal(t, *result.Id, int64(1))
+		assert.Equal(t, *result.Id, *noteId)
 		assert.NotNil(t, *result.NoteGuid)
 		assert.NotNil(t, *result.Version)
 		assert.NotNil(t, *result.Text)
@@ -84,12 +90,17 @@ func TestGetNoteByNoteGuid(t *testing.T) {
 	minioServiceImplTest := MinioServiceImplTest{}
 
 	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		expectedNote := GetNoteWithMaxVersion()
-
 		var noteService = entity.NoteServiceImpl{
 			JdbcTemplate: &testJdbcTemplate,
 			MinioService: &minioServiceImplTest}
-		result, err := noteService.GetActualNoteByGuid(*expectedNote.NoteGuid)
+
+		var note = CreateNewRandomNote()
+		_, err := noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+
+		result, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
 		}
@@ -99,7 +110,7 @@ func TestGetNoteByNoteGuid(t *testing.T) {
 		assert.Equal(t, *result.Version, *result.Version)
 		assert.Equal(t, *result.Text, *result.Text)
 		assert.Equal(t, *result.UserId, *result.UserId)
-		assert.NotNil(t, *result.PrevNoteVersionId)
+		assert.Nil(t, result.PrevNoteVersionId)
 		assert.NotNil(t, *result.CreateDate)
 		assert.Equal(t, *result.Deleted, *result.Deleted)
 		assert.Equal(t, *result.Archive, *result.Archive)
@@ -333,7 +344,7 @@ func TestUpNoteVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("не удалось получить note: %s", err)
 		}
-		firstNoteVersion, err = noteService.GetNote(*firstNoteVersionId)
+		_, err = noteService.GetNote(*firstNoteVersionId)
 		if err != nil {
 			t.Fatalf("не удалось получить note: %s", err)
 		}

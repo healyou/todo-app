@@ -105,6 +105,10 @@ func (service *NoteServiceImpl) updateNote(note *Note) (*int64, error) {
 				return err
 			}
 
+			if (*prevNote.Id != *note.Id) {
+				return errors.New("нельзя изменить неактуальную версию note")
+			}
+
 			setPrevVersionNotActual(DB, ctx, *prevNote.NoteGuid)
 			newNoteId, err := saveNewNoteVersion(DB, ctx, note)
 			if err != nil {
