@@ -6,8 +6,9 @@ import (
 	"io"
 	"log"
 	"os"
-	"todo/src/filestorage"
 	"todo/src/controllers"
+	"todo/src/di"
+	"todo/src/filestorage"
 	"todo/src/utils"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -16,9 +17,9 @@ import (
 )
 
 func main() {
+	di.InitDependency()
 	// minioExample()
-	var router = note_controller.SetupRouter(note_controller.SetupMiddleware)
-	// router = note_controller.SetupMiddleware(router)
+	var router = note_controller.SetupRouter()
 	err := router.Run(":8222")
 	if err != nil {
 		return

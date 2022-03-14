@@ -10,7 +10,7 @@ type JdbcTemplateImplTest struct {
 	context context.Context
 }
 
-func (jdbcTemplate *JdbcTemplateImplTest) ExecuteInTransaction(txFunc func(context context.Context, DB *sql.Tx) error) error {
+func (jdbcTemplate JdbcTemplateImplTest) ExecuteInTransaction(txFunc func(context context.Context, DB *sql.Tx) error) error {
 	err := txFunc(jdbcTemplate.context, jdbcTemplate.DB)
 
 	if err != nil {
@@ -20,7 +20,7 @@ func (jdbcTemplate *JdbcTemplateImplTest) ExecuteInTransaction(txFunc func(conte
 	return nil
 }
 
-func (jdbcTemplate *JdbcTemplateImplTest) InTransactionForSqlResult(
+func (jdbcTemplate JdbcTemplateImplTest) InTransactionForSqlResult(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Result, error)) (*sql.Result, error) {
 
 	result, err := txFunc(jdbcTemplate.context, jdbcTemplate.DB)
@@ -32,7 +32,7 @@ func (jdbcTemplate *JdbcTemplateImplTest) InTransactionForSqlResult(
 	return result, nil
 }
 
-func (jdbcTemplate *JdbcTemplateImplTest) InTransactionForSqlRows(
+func (jdbcTemplate JdbcTemplateImplTest) InTransactionForSqlRows(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Rows, error)) (*sql.Rows, error) {
 
 	result, err := txFunc(jdbcTemplate.context, jdbcTemplate.DB)
@@ -44,7 +44,7 @@ func (jdbcTemplate *JdbcTemplateImplTest) InTransactionForSqlRows(
 	return result, nil
 }
 
-func (jdbcTemplate *JdbcTemplateImplTest) InTransactionForSqlRow(
+func (jdbcTemplate JdbcTemplateImplTest) InTransactionForSqlRow(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Row, error)) (*sql.Row, error) {
 
 	result, err := txFunc(jdbcTemplate.context, jdbcTemplate.DB)

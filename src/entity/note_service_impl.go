@@ -9,11 +9,13 @@ import (
 )
 
 type NoteServiceImpl struct {
+	NoteService
+
 	JdbcTemplate db.JdbcTemplate
 	MinioService filestorage.MinioService
 }
 
-func (service *NoteServiceImpl) SaveNote(note *Note) (*int64, error) {
+func (service NoteServiceImpl) SaveNote(note *Note) (*int64, error) {
 	var id *int64
 	var err error
 	if note.Id == nil {
@@ -29,7 +31,7 @@ func (service *NoteServiceImpl) SaveNote(note *Note) (*int64, error) {
 	}
 }
 
-func (service *NoteServiceImpl) createNote(note *Note) (*int64, error) {
+func (service NoteServiceImpl) createNote(note *Note) (*int64, error) {
 	var createdNoteId *int64
 
 	err := service.JdbcTemplate.ExecuteInTransaction(
@@ -66,7 +68,7 @@ func (service *NoteServiceImpl) createNote(note *Note) (*int64, error) {
 	}
 }
 
-func (service *NoteServiceImpl) createNoteFile(DB *sql.Tx, ctx context.Context, file *NoteFile, noteId int64) error {
+func (service NoteServiceImpl) createNoteFile(DB *sql.Tx, ctx context.Context, file *NoteFile, noteId int64) error {
 	if file.Data == nil {
 		return errors.New("нет данных файла для сохранения")
 	}
@@ -95,7 +97,7 @@ func (service *NoteServiceImpl) createNoteFile(DB *sql.Tx, ctx context.Context, 
 	return nil
 }
 
-func (service *NoteServiceImpl) updateNote(note *Note) (*int64, error) {
+func (service NoteServiceImpl) updateNote(note *Note) (*int64, error) {
 	var createdNoteId *int64
 
 	err := service.JdbcTemplate.ExecuteInTransaction(
@@ -166,7 +168,7 @@ func (service *NoteServiceImpl) updateNote(note *Note) (*int64, error) {
 	}
 }
 
-func (service *NoteServiceImpl) updateNoteFile(DB *sql.Tx, ctx context.Context, noteFile *NoteFile, newNoteId int64) error {
+func (service NoteServiceImpl) updateNoteFile(DB *sql.Tx, ctx context.Context, noteFile *NoteFile, newNoteId int64) error {
 	fileGuid, err := service.MinioService.SaveFile(noteFile.Data, *noteFile.Filename)
 	if err != nil {
 		return err
@@ -203,7 +205,7 @@ func getNewFiles(noteFiles []NoteFile) []NoteFile {
 	return newFiles
 }
 
-func (service *NoteServiceImpl) removeNoteFiles(DB *sql.Tx, ctx context.Context, newNoteId *int64, removedFileIds []int64) error {
+func (service NoteServiceImpl) removeNoteFiles(DB *sql.Tx, ctx context.Context, newNoteId *int64, removedFileIds []int64) error {
 	if len(removedFileIds) == 1 {
 		return nil
 	}
@@ -316,7 +318,7 @@ func setPrevVersionNotActual(DB *sql.Tx, ctx context.Context, noteGuid string) e
 	return nil
 }
 
-func (service *NoteServiceImpl) GetActualNoteByGuid(noteGuid string) (*Note, error) {
+func (service NoteServiceImpl) GetActualNoteByGuid(noteGuid string) (*Note, error) {
 	var note *Note
 
 	err := service.JdbcTemplate.ExecuteInTransaction(
@@ -347,7 +349,7 @@ func (service *NoteServiceImpl) GetActualNoteByGuid(noteGuid string) (*Note, err
 	}
 }
 
-func (service *NoteServiceImpl) GetNote(id int64) (*Note, error) {
+func (service NoteServiceImpl) GetNote(id int64) (*Note, error) {
 	var note *Note
 
 	err := service.JdbcTemplate.ExecuteInTransaction(
@@ -378,7 +380,7 @@ func (service *NoteServiceImpl) GetNote(id int64) (*Note, error) {
 	}
 }
 
-func (service *NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Context, noteId int64) ([]NoteFile, error) {
+func (service NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Context, noteId int64) ([]NoteFile, error) {
 	noteFilesSql :=
 		"select * from note_file where note_id in (" +
 			"    select id from note where id = ?" +
@@ -410,7 +412,7 @@ func (service *NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Con
 	return noteFiles, nil
 }
 
-func (service *NoteServiceImpl) DownNoteVersion(noteGuid string) error {
+func (service NoteServiceImpl) DownNoteVersion(noteGuid string) error {
 	return service.JdbcTemplate.ExecuteInTransaction(
 		func(ctx context.Context, DB *sql.Tx) error {
 			var prevNoteVersionId, err = getPrevNoteVersionIdIfExists(ctx, DB, noteGuid)
@@ -444,7 +446,7 @@ func (service *NoteServiceImpl) DownNoteVersion(noteGuid string) error {
 		})
 }
 
-func (service *NoteServiceImpl) UpNoteVersion(noteGuid string) error {
+func (service NoteServiceImpl) UpNoteVersion(noteGuid string) error {
 	return service.JdbcTemplate.ExecuteInTransaction(
 		func(ctx context.Context, DB *sql.Tx) error {
 			currentActualNoteId, err := getCurrentActualNoteIdByGuid(ctx, DB, noteGuid)
@@ -523,7 +525,7 @@ func getUpNoteVersionIdIfExists(ctx context.Context, DB *sql.Tx, noteId int64) (
 	return id, nil
 }
 
-func (service *NoteServiceImpl) GetUserActualNotes(userId int64) ([]Note, error) {
+func (service NoteServiceImpl) GetUserActualNotes(userId int64) ([]Note, error) {
 	var notes []Note
 
 	err := service.JdbcTemplate.ExecuteInTransaction(

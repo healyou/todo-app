@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	note_controller "todo/src/controllers"
+	"todo/src/di"
 	"todo/src/entity"
 
 	"github.com/gin-gonic/gin"
@@ -19,16 +20,11 @@ import (
 )
 
 func TestRestGetActualNote(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
-		var router = createTestRouter(&noteService)
+	txFunc := func(di di.DependencyInjection) {
+		var router = createTestRouter(di.GetNoteService())
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNote(t, &noteService)
+		var note, err = createAndGetNewNote(t, di.GetNoteService())
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
@@ -66,13 +62,8 @@ func TestRestGetActualNote(t *testing.T) {
 }
 
 func TestRestSaveNote(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
-		var router = createTestRouter(&noteService)
+	txFunc := func(di di.DependencyInjection) {
+		var router = createTestRouter(di.GetNoteService())
 
 		/* Создаём запрос в rest */
 		var note = CreateNewRandomNote()
@@ -106,16 +97,11 @@ func TestRestSaveNote(t *testing.T) {
 }
 
 func TestRestDownNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
-		var router = createTestRouter(&noteService)
+	txFunc := func(di di.DependencyInjection) {
+		var router = createTestRouter(di.GetNoteService())
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNoteWith2Version(t, &noteService)
+		var note, err = createAndGetNewNoteWith2Version(t, di.GetNoteService())
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
@@ -147,24 +133,19 @@ func TestRestDownNoteVersion(t *testing.T) {
 }
 
 func TestRestUpNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
-		var router = createTestRouter(&noteService)
+	txFunc := func(di di.DependencyInjection) {
+		var router = createTestRouter(di.GetNoteService())
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNoteWith2Version(t, &noteService)
+		var note, err = createAndGetNewNoteWith2Version(t, di.GetNoteService())
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
-		err = noteService.DownNoteVersion(*note.NoteGuid)
+		err = di.GetNoteService().DownNoteVersion(*note.NoteGuid)
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
-		note, err = noteService.GetActualNoteByGuid(*note.NoteGuid)
+		note, err = di.GetNoteService().GetActualNoteByGuid(*note.NoteGuid)
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
@@ -197,16 +178,11 @@ func TestRestUpNoteVersion(t *testing.T) {
 }
 
 func TestRestGetUserNotes(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
-		var router = createTestRouter(&noteService)
+	txFunc := func(di di.DependencyInjection) {
+		var router = createTestRouter(di.GetNoteService())
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNote(t, &noteService)
+		var note, err = createAndGetNewNote(t, di.GetNoteService())
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
@@ -251,14 +227,11 @@ func TestRestGetUserNotes(t *testing.T) {
 	ExecuteTestRollbackTransaction(t, txFunc)
 }
 
-func createTestRouter(noteService *entity.NoteServiceImpl) *gin.Engine {
-	var setupTestMiddleware = func(router *gin.Engine) {
-		router.Use(note_controller.ApiMiddleware(noteService))
-	}
-	return note_controller.SetupRouter(setupTestMiddleware)
+func createTestRouter(noteService entity.NoteService) *gin.Engine {
+	return note_controller.SetupRouter()
 }
 
-func createAndGetNewNote(t *testing.T, noteService *entity.NoteServiceImpl) (*entity.Note, error) {
+func createAndGetNewNote(t *testing.T, noteService entity.NoteService) (*entity.Note, error) {
 	noteId, err := noteService.SaveNote(CreateNewRandomNote())
 	if err != nil {
 		t.Fatalf("error was not expected while test method: %s", err)
@@ -270,7 +243,7 @@ func createAndGetNewNote(t *testing.T, noteService *entity.NoteServiceImpl) (*en
 	return note, nil
 }
 
-func createAndGetNewNoteWith2Version(t *testing.T, noteService *entity.NoteServiceImpl) (*entity.Note, error) {
+func createAndGetNewNoteWith2Version(t *testing.T, noteService entity.NoteService) (*entity.Note, error) {
 	/* Создаём новый note */
 	noteId, err := noteService.SaveNote(CreateNewRandomNote())
 	if err != nil {

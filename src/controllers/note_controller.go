@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"todo/src/di"
 	"todo/src/entity"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ func SaveNote(c *gin.Context) {
 		return
 	}
 
-	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
+	var noteService = di.GetInstance().GetNoteService()
 
 	_, err = noteService.SaveNote(&note)
 	if err != nil {
@@ -40,7 +41,7 @@ func GetActualNote(c *gin.Context) {
 		return
 	}
 
-	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
+	var noteService = di.GetInstance().GetNoteService()
 
 	note, err := noteService.GetActualNoteByGuid(guidParam)
 	if err != nil {
@@ -67,7 +68,7 @@ func GetUserNotes(c *gin.Context) {
 		return
 	}
 
-	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
+	var noteService = di.GetInstance().GetNoteService()
 
 	notes, err := noteService.GetUserActualNotes(userIdParam)
 	if err != nil {
@@ -87,7 +88,7 @@ func DownNoteVersion(c *gin.Context) {
 		return
 	}
 
-	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
+	var noteService = di.GetInstance().GetNoteService()
 
 	var err = noteService.DownNoteVersion(guidParam)
 	if err != nil {
@@ -108,7 +109,7 @@ func UpNoteVersion(c *gin.Context) {
 		return
 	}
 
-	var noteService = c.MustGet("noteService").(*entity.NoteServiceImpl)
+	var noteService = di.GetInstance().GetNoteService()
 
 	var err = noteService.UpNoteVersion(guidParam)
 	if err != nil {

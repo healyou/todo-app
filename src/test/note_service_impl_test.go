@@ -2,6 +2,7 @@ package test
 
 import (
 	"testing"
+	"todo/src/di"
 	"todo/src/entity"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -9,14 +10,10 @@ import (
 )
 
 func TestSaveNewNoteWithData(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
+	txFunc := func(di di.DependencyInjection) {
 		savedNote := CreateNewRandomNote()
 
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+		var noteService = di.GetNoteService()
 		result, err := noteService.SaveNote(savedNote)
 		if err != nil {
 			t.Fatalf("error was not expected while test method: %s", err)
@@ -55,12 +52,8 @@ func TestSaveNewNoteWithData(t *testing.T) {
 }
 
 func TestGetNote(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		noteId, err := noteService.SaveNote(CreateNewRandomNote())
 		if err != nil {
@@ -87,12 +80,8 @@ func TestGetNote(t *testing.T) {
 }
 
 func TestGetNoteByNoteGuid(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		var note = CreateNewRandomNote()
 		_, err := noteService.SaveNote(note)
@@ -120,12 +109,8 @@ func TestGetNoteByNoteGuid(t *testing.T) {
 }
 
 func TestUpdateNote(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		noteId, err := noteService.SaveNote(CreateNewRandomNote())
 		if err != nil {
@@ -171,12 +156,8 @@ func TestUpdateNote(t *testing.T) {
 }
 
 func TestDownNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		/* Создаём 1 версию note */
 		note := CreateNewRandomNote()
@@ -245,12 +226,8 @@ func TestDownNoteVersion(t *testing.T) {
 }
 
 func TestErrorDownNewNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		/* Создаём 1 версию note */
 		note := CreateNewRandomNote()
@@ -274,12 +251,8 @@ func TestErrorDownNewNoteVersion(t *testing.T) {
 }
 
 func TestErrorDoubleDownNewNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		/* Создаём 1 версию note */
 		note := CreateNewRandomNote()
@@ -315,12 +288,8 @@ func TestErrorDoubleDownNewNoteVersion(t *testing.T) {
 }
 
 func TestUpNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		/* Создаём 1 версию note */
 		note := CreateNewRandomNote()
@@ -389,12 +358,8 @@ func TestUpNoteVersion(t *testing.T) {
 }
 
 func TestErrorUpNewNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		/* Создаём 1 версию note */
 		note := CreateNewRandomNote()
@@ -418,12 +383,8 @@ func TestErrorUpNewNoteVersion(t *testing.T) {
 }
 
 func TestErrorDoubleUpNewNoteVersion(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		/* Создаём 1 версию note */
 		note := CreateNewRandomNote()
@@ -466,12 +427,8 @@ func TestErrorDoubleUpNewNoteVersion(t *testing.T) {
 
 
 func TestGetUserNotes(t *testing.T) {
-	minioServiceImplTest := MinioServiceImplTest{}
-
-	txFunc := func(testJdbcTemplate JdbcTemplateImplTest) {
-		var noteService = entity.NoteServiceImpl{
-			JdbcTemplate: &testJdbcTemplate,
-			MinioService: &minioServiceImplTest}
+	txFunc := func(di di.DependencyInjection) {
+		var noteService = di.GetNoteService()
 
 		/* Создаём notes */
 		notes := [2]entity.Note{*CreateNewRandomNote(), *CreateNewRandomNote()}

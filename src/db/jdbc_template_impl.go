@@ -7,11 +7,13 @@ import (
 )
 
 type JdbcTemplateImpl struct {
+	JdbcTemplate
+
 	DriverName string
 	DbUrl      string
 }
 
-func (jdbcTemplate *JdbcTemplateImpl) ExecuteInTransaction(
+func (jdbcTemplate JdbcTemplateImpl) ExecuteInTransaction(
 	txFunc func(context context.Context, DB *sql.Tx) error) error {
 
 	// TODO надо бы создавать коннект 1 раз
@@ -52,7 +54,7 @@ func (jdbcTemplate *JdbcTemplateImpl) ExecuteInTransaction(
 	return nil
 }
 
-func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlResult(
+func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlResult(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Result, error)) (*sql.Result, error) {
 
 	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
@@ -90,7 +92,7 @@ func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlResult(
 	return result, nil
 }
 
-func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlRows(
+func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlRows(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Rows, error)) (*sql.Rows, error) {
 
 	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
@@ -128,7 +130,7 @@ func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlRows(
 	return result, nil
 }
 
-func (jdbcTemplate *JdbcTemplateImpl) InTransactionForSqlRow(
+func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlRow(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Row, error)) (*sql.Row, error) {
 
 	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
