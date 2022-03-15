@@ -7,28 +7,14 @@ import (
 )
 
 type JdbcTemplateImpl struct {
-	JdbcTemplate
-
-	DriverName string
-	DbUrl      string
+	SqlDb *sql.DB
 }
 
 func (jdbcTemplate JdbcTemplateImpl) ExecuteInTransaction(
 	txFunc func(context context.Context, DB *sql.Tx) error) error {
 
-	// TODO надо бы создавать коннект 1 раз
-	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	defer func(db *sql.DB) {
-		err = db.Close()
-	}(db)
-
-	// Create a new context, and begin a transaction
 	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := jdbcTemplate.SqlDb.BeginTx(ctx, nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -57,17 +43,8 @@ func (jdbcTemplate JdbcTemplateImpl) ExecuteInTransaction(
 func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlResult(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Result, error)) (*sql.Result, error) {
 
-	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
-	if err != nil {
-		return nil, err
-	}
-	defer func(db *sql.DB) {
-		err = db.Close()
-	}(db)
-
-	// Create a new context, and begin a transaction
 	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := jdbcTemplate.SqlDb.BeginTx(ctx, nil)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -95,17 +72,8 @@ func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlResult(
 func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlRows(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Rows, error)) (*sql.Rows, error) {
 
-	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
-	if err != nil {
-		return nil, err
-	}
-	defer func(db *sql.DB) {
-		err = db.Close()
-	}(db)
-
-	// Create a new context, and begin a transaction
 	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := jdbcTemplate.SqlDb.BeginTx(ctx, nil)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -133,17 +101,8 @@ func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlRows(
 func (jdbcTemplate JdbcTemplateImpl) InTransactionForSqlRow(
 	txFunc func(context context.Context, DB *sql.Tx) (*sql.Row, error)) (*sql.Row, error) {
 
-	db, err := sql.Open(jdbcTemplate.DriverName, jdbcTemplate.DbUrl)
-	if err != nil {
-		return nil, err
-	}
-	defer func(db *sql.DB) {
-		err = db.Close()
-	}(db)
-
-	// Create a new context, and begin a transaction
 	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := jdbcTemplate.SqlDb.BeginTx(ctx, nil)
 	if err != nil {
 		log.Println(err)
 	}

@@ -9,8 +9,6 @@ import (
 )
 
 type NoteServiceImpl struct {
-	NoteService
-
 	JdbcTemplate db.JdbcTemplate
 	MinioService filestorage.MinioService
 }
@@ -107,7 +105,7 @@ func (service NoteServiceImpl) updateNote(note *Note) (*int64, error) {
 				return err
 			}
 
-			if (*prevNote.Id != *note.Id) {
+			if *prevNote.Id != *note.Id {
 				return errors.New("нельзя изменить неактуальную версию note")
 			}
 
@@ -559,9 +557,9 @@ func (service NoteServiceImpl) GetUserActualNotes(userId int64) ([]Note, error) 
 			}
 
 			return nil
-	})
+		})
 
-	if (err != nil) {
+	if err != nil {
 		return nil, err
 	}
 

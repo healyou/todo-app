@@ -20,11 +20,11 @@ import (
 )
 
 func TestRestGetActualNote(t *testing.T) {
-	txFunc := func(di di.DependencyInjection) {
-		var router = createTestRouter(di.GetNoteService())
+	txFunc := func() {
+		var router = createTestRouter(di.GetInstance().GetNoteService())
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNote(t, di.GetNoteService())
+		var note, err = createAndGetNewNote(t, di.GetInstance().GetNoteService())
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
@@ -62,8 +62,8 @@ func TestRestGetActualNote(t *testing.T) {
 }
 
 func TestRestSaveNote(t *testing.T) {
-	txFunc := func(di di.DependencyInjection) {
-		var router = createTestRouter(di.GetNoteService())
+	txFunc := func() {
+		var router = createTestRouter(di.GetInstance().GetNoteService())
 
 		/* Создаём запрос в rest */
 		var note = CreateNewRandomNote()
@@ -97,11 +97,11 @@ func TestRestSaveNote(t *testing.T) {
 }
 
 func TestRestDownNoteVersion(t *testing.T) {
-	txFunc := func(di di.DependencyInjection) {
-		var router = createTestRouter(di.GetNoteService())
+	txFunc := func() {
+		var router = createTestRouter(di.GetInstance().GetNoteService())
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNoteWith2Version(t, di.GetNoteService())
+		var note, err = createAndGetNewNoteWith2Version(t, di.GetInstance().GetNoteService())
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
@@ -133,19 +133,20 @@ func TestRestDownNoteVersion(t *testing.T) {
 }
 
 func TestRestUpNoteVersion(t *testing.T) {
-	txFunc := func(di di.DependencyInjection) {
-		var router = createTestRouter(di.GetNoteService())
+	txFunc := func() {
+		var noteService = di.GetInstance().GetNoteService()
+		var router = createTestRouter(noteService)
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNoteWith2Version(t, di.GetNoteService())
+		var note, err = createAndGetNewNoteWith2Version(t, noteService)
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
-		err = di.GetNoteService().DownNoteVersion(*note.NoteGuid)
+		err = noteService.DownNoteVersion(*note.NoteGuid)
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
-		note, err = di.GetNoteService().GetActualNoteByGuid(*note.NoteGuid)
+		note, err = noteService.GetActualNoteByGuid(*note.NoteGuid)
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}
@@ -178,11 +179,11 @@ func TestRestUpNoteVersion(t *testing.T) {
 }
 
 func TestRestGetUserNotes(t *testing.T) {
-	txFunc := func(di di.DependencyInjection) {
-		var router = createTestRouter(di.GetNoteService())
+	txFunc := func() {
+		var router = createTestRouter(di.GetInstance().GetNoteService())
 
 		/* Создаём запрос в rest */
-		var note, err = createAndGetNewNote(t, di.GetNoteService())
+		var note, err = createAndGetNewNote(t, di.GetInstance().GetNoteService())
 		if err != nil {
 			t.Fatalf("ошибка создания note: %s", err)
 		}

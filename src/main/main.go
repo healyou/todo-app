@@ -17,7 +17,8 @@ import (
 )
 
 func main() {
-	di.InitDependency()
+	/* Значения инициализруется при первом вызове*/
+	di.GetInstance()
 	// minioExample()
 	var router = note_controller.SetupRouter()
 	err := router.Run(":8222")

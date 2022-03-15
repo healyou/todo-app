@@ -6,11 +6,13 @@ import (
 	"testing"
 	"todo/src/di"
 	"todo/src/entity"
+
+	// "todo/src/entity"
 	"todo/src/utils"
 )
 
 func ExecuteTestRollbackTransaction(
-	t *testing.T, txFunc func(di di.DependencyInjection)) {
+	t *testing.T, txFunc func()) {
 
 	db, err := sql.Open(utils.MySqlDriverName, utils.MySqlDataSource)
 	if err != nil {
@@ -39,7 +41,13 @@ func ExecuteTestRollbackTransaction(
 	var noteService = entity.NoteServiceImpl{
 		JdbcTemplate: &testJdbcTemplate,
 		MinioService: &minioServiceImplTest}
-	di.InitForTest(testJdbcTemplate, noteService, minioServiceImplTest)
-	
-	txFunc(di.GetInstance())
+
+	var testDiValue di.DependencyInjection = TestDependencyInjectionImpl{
+		NoteServiceValue: noteService, MinioServiceValue: minioServiceImplTest}
+	/* mocking global object function*/
+	di.GetInstance = func() di.DependencyInjection {
+		return testDiValue
+	}
+
+	txFunc()
 }

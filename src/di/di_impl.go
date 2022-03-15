@@ -1,6 +1,9 @@
 package di
 
 import (
+	"database/sql"
+	"errors"
+	"flag"
 	"log"
 	"sync"
 	"todo/src/db"
@@ -12,74 +15,85 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+/* public reference to function (mock in tests) */
+var GetInstance func() DependencyInjection = getInstanceFunction
+
 var onceDi sync.Once
-var instance *DependencyInjectionImpl = nil
+var instance *dependencyInjectionImpl = nil
 
 /* Получить объект одиночку (перед использованием надо проинициализировать) */
-func GetInstance() *DependencyInjectionImpl {	
+func getInstanceFunction() DependencyInjection {
 	onceDi.Do(func() {
-	   instance = new(DependencyInjectionImpl)
+		checkNoteTestModeForCreateDi()
+		instance = new(dependencyInjectionImpl)
+		initDependency(instance)
 	})
-	return instance
+	var depInj DependencyInjection = *instance
+	return depInj
 }
 
-var onceInitDep sync.Once
+func checkNoteTestModeForCreateDi() {
+	if flag.Lookup("test.v") != nil {
+		log.Fatalln(errors.New("в тестах необходимо переопределять создание глобальных объектов"))
+	} else {
+		log.Println("создание глобальных объектов")
+	}
+}
+
 /* Инициализация зависимостей приложения */
-func InitDependency() {
-	onceInitDep.Do(func() {
-		var di = GetInstance()
-		di.jdbcTemplate = db.JdbcTemplateImpl{
-			DriverName: utils.MySqlDriverName,
-			DbUrl:      utils.MySqlDataSource}
+func initDependency(di *dependencyInjectionImpl) {
+	/* Соединение с базой */
+	var sqlDb, err = sql.Open(utils.MySqlDriverName, utils.MySqlDataSource)
+	if err != nil {
+		log.Println("Ошибка создания соединения с бд")
+		log.Fatalln(err)
+		return
+	}
+	err = sqlDb.Ping()
+	if err != nil {
+		log.Println("Ошибка проверки соединения с бд")
+		log.Fatalln(err)
+		return
+	}
 
-		endpoint := utils.MinioEndpoint
-		accessKeyID := utils.MinioAccessKey
-		secretAccessKey := utils.MinioSecretKey
-		var minioClient, err = minio.New(endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-			Secure: false,
-		})
-		if err != nil {
-			log.Fatalln(err)
-			return
-		}
-
-		di.minioClient = *minioClient
-
-		di.minioService = filestorage.MinioServiceImpl{
-			Client: minioClient}
-		di.noteService = entity.NoteServiceImpl{
-			JdbcTemplate: di.jdbcTemplate,
-			MinioService: di.minioService}
+	/* Minio client */
+	endpoint := utils.MinioEndpoint
+	accessKeyID := utils.MinioAccessKey
+	secretAccessKey := utils.MinioSecretKey
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: false,
 	})
+	if err != nil {
+		log.Println("ошибка подключения к minio")
+		log.Fatalln(err)
+		return
+	}
+
+	/* Устанавливаем значения */
+	di.sqlDb = sqlDb
+	di.jdbcTemplate = db.JdbcTemplateImpl{SqlDb: sqlDb}
+	di.minioClient = *minioClient
+
+	di.minioService = filestorage.MinioServiceImpl{
+		Client: minioClient}
+	di.noteService = entity.NoteServiceImpl{
+		JdbcTemplate: di.jdbcTemplate,
+		MinioService: di.minioService}
 }
 
-// TODO это надо отправить в тесты
-/* Инициализация зависимостей приложения для тестов */
-func InitForTest(jdbc db.JdbcTemplate, 
-	noteService entity.NoteService,
-	minioService filestorage.MinioService) {
-
-	var di = GetInstance()
-	di.minioService = minioService
-	di.noteService = noteService
-}
-
-type DependencyInjectionImpl struct {
-	// TODO правильно ли так наследование делать?
-	DependencyInjection
-
+type dependencyInjectionImpl struct {
+	sqlDb        *sql.DB
 	jdbcTemplate db.JdbcTemplate
-	minioClient minio.Client
-	// TODO что значит вернуть указатель, а что значит вернуть значение
+	minioClient  minio.Client
 	noteService  entity.NoteService
 	minioService filestorage.MinioService
 }
 
-func (di DependencyInjectionImpl) GetNoteService() entity.NoteService {
+func (di dependencyInjectionImpl) GetNoteService() entity.NoteService {
 	return di.noteService
 }
 
-func (di DependencyInjectionImpl) GetMinioService() filestorage.MinioService {
+func (di dependencyInjectionImpl) GetMinioService() filestorage.MinioService {
 	return di.minioService
 }
