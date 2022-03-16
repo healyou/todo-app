@@ -98,6 +98,13 @@ services:
 #    image: todo-app:latest
 #    container_name: todo-app
 #    restart: always
+#    environment:
+#      PROFILE: "PROD"
+#      MINIO_ENDPOINT: "localhost:9000"
+#      MINIO_ACCESS_KEY: "minio"
+#      MINIO_SECRET_KEY: "miniopsw"
+#      MY_SQL_DRIVER_NAME: "mysql"
+#      MY_SQL_DATASOURCE_URL: "mysql:mysql@tcp(127.0.0.1:3306)/todo?parseTime=true"
 #    ports:
 #      - "8222:8222"
 #    depends_on:

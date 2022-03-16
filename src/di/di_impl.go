@@ -8,8 +8,8 @@ import (
 	"sync"
 	"todo/src/db"
 	"todo/src/entity"
+	"todo/src/environment"
 	"todo/src/filestorage"
-	"todo/src/utils"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -43,7 +43,9 @@ func checkNoteTestModeForCreateDi() {
 /* Инициализация зависимостей приложения */
 func initDependency(di *dependencyInjectionImpl) {
 	/* Соединение с базой */
-	var sqlDb, err = sql.Open(utils.MySqlDriverName, utils.MySqlDataSource)
+	var sqlDb, err = sql.Open(
+		environment.GetEnvVariables().MySqlDriverName, 
+		environment.GetEnvVariables().MySqlDataSource)
 	if err != nil {
 		log.Println("Ошибка создания соединения с бд")
 		log.Fatalln(err)
@@ -57,9 +59,9 @@ func initDependency(di *dependencyInjectionImpl) {
 	}
 
 	/* Minio client */
-	endpoint := utils.MinioEndpoint
-	accessKeyID := utils.MinioAccessKey
-	secretAccessKey := utils.MinioSecretKey
+	endpoint := environment.GetEnvVariables().MinioEndpoint
+	accessKeyID := environment.GetEnvVariables().MinioAccessKey
+	secretAccessKey := environment.GetEnvVariables().MinioSecretKey
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: false,

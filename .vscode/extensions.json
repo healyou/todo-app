@@ -4,6 +4,7 @@
         "mhutchie.git-graph",
         "golang.go",
         "ms-vscode-remote.remote-containers",
-        "Gruntfuggly.todo-tree"
+        "gruntfuggly.todo-tree",
+        "mikestead.dotenv"
     ]
 }

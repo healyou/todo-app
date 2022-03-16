@@ -3,9 +3,11 @@ package test
 import (
 	"context"
 	"database/sql"
+	"os"
 	"testing"
 	"todo/src/di"
 	"todo/src/entity"
+	"todo/src/environment"
 
 	// "todo/src/entity"
 	"todo/src/utils"
@@ -14,7 +16,13 @@ import (
 func ExecuteTestRollbackTransaction(
 	t *testing.T, txFunc func()) {
 
-	db, err := sql.Open(utils.MySqlDriverName, utils.MySqlDataSource)
+	/* грузим тестовые переменные */
+	os.Setenv(utils.ProfileEnvName, "TEST")
+	environment.GetEnvVariables()
+
+	db, err := sql.Open(
+		environment.GetEnvVariables().MySqlDriverName, 
+		environment.GetEnvVariables().MySqlDataSource)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}

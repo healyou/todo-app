@@ -8,8 +8,8 @@ import (
 	"os"
 	"todo/src/controllers"
 	"todo/src/di"
+	"todo/src/environment"
 	"todo/src/filestorage"
-	"todo/src/utils"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/minio/minio-go/v7"
@@ -17,8 +17,11 @@ import (
 )
 
 func main() {
-	/* Значения инициализруется при первом вызове*/
+	/* Грузим переменые окружения */
+	environment.GetEnvVariables()
+	/* Инициализируем одиночек */
 	di.GetInstance()
+
 	// minioExample()
 	var router = note_controller.SetupRouter()
 	err := router.Run(":8222")
@@ -28,9 +31,9 @@ func main() {
 }
 
 func minioExample() {
-	endpoint := utils.MinioEndpoint
-	accessKeyID := utils.MinioAccessKey
-	secretAccessKey := utils.MinioSecretKey
+	endpoint := environment.GetEnvVariables().MinioEndpoint
+	accessKeyID := environment.GetEnvVariables().MinioAccessKey
+	secretAccessKey := environment.GetEnvVariables().MinioSecretKey
 
 	// Initialize minio client object.
 	minioClient, err := minio.New(endpoint, &minio.Options{
