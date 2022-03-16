@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"log"
-	"sync"
 	"todo/src/db"
 	"todo/src/entity"
 	"todo/src/environment"
@@ -15,47 +14,48 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-/* public reference to function (mock in tests) */
-var GetInstance func() DependencyInjection = getInstanceFunction
-
-var onceDi sync.Once
-var instance *dependencyInjectionImpl = nil
+var instance *DependencyInjection = nil
+var hasInit = false
 
 /* Получить объект одиночку (перед использованием надо проинициализировать) */
-func getInstanceFunction() DependencyInjection {
-	onceDi.Do(func() {
-		checkNoteTestModeForCreateDi()
-		instance = new(dependencyInjectionImpl)
-		initDependency(instance)
-	})
+func GetInstance() DependencyInjection {
+	if !hasInit {
+		instance = initDependencyNotTest()
+		hasInit = true
+	}
 	var depInj DependencyInjection = *instance
 	return depInj
 }
 
-func checkNoteTestModeForCreateDi() {
-	if flag.Lookup("test.v") != nil {
-		log.Fatalln(errors.New("в тестах необходимо переопределять создание глобальных объектов"))
+func SetDiFromTest(di *DependencyInjection) {
+	if flag.Lookup("test.v") == nil {
+		log.Fatalln(errors.New("устанавливать значение DependencyInjection руками можно только в тестах"))
 	} else {
-		log.Println("создание глобальных объектов")
+		instance = di
+		hasInit = true
 	}
 }
 
 /* Инициализация зависимостей приложения */
-func initDependency(di *dependencyInjectionImpl) {
+func initDependencyNotTest() *DependencyInjection {
+	if flag.Lookup("test.v") != nil {
+		log.Fatalln(errors.New("в тестах необходимо переопределить DependencyInjection"))
+	}
+
+	var di = new(DependencyInjectionImpl)
+
 	/* Соединение с базой */
 	var sqlDb, err = sql.Open(
-		environment.GetEnvVariables().MySqlDriverName, 
+		environment.GetEnvVariables().MySqlDriverName,
 		environment.GetEnvVariables().MySqlDataSource)
 	if err != nil {
 		log.Println("Ошибка создания соединения с бд")
 		log.Fatalln(err)
-		return
 	}
 	err = sqlDb.Ping()
 	if err != nil {
 		log.Println("Ошибка проверки соединения с бд")
 		log.Fatalln(err)
-		return
 	}
 
 	/* Minio client */
@@ -69,33 +69,39 @@ func initDependency(di *dependencyInjectionImpl) {
 	if err != nil {
 		log.Println("ошибка подключения к minio")
 		log.Fatalln(err)
-		return
 	}
 
 	/* Устанавливаем значения */
-	di.sqlDb = sqlDb
-	di.jdbcTemplate = db.JdbcTemplateImpl{SqlDb: sqlDb}
-	di.minioClient = *minioClient
-
-	di.minioService = filestorage.MinioServiceImpl{
+	jdbcTemplate := db.JdbcTemplateImpl{SqlDb: sqlDb}
+	minioService := filestorage.MinioServiceImpl{
 		Client: minioClient}
-	di.noteService = entity.NoteServiceImpl{
-		JdbcTemplate: di.jdbcTemplate,
+	noteService := entity.NoteServiceImpl{
+		JdbcTemplate: jdbcTemplate,
 		MinioService: di.minioService}
+	di.Initialize(noteService, minioService)
+
+	var depInj DependencyInjection = *di
+	return &depInj
 }
 
-type dependencyInjectionImpl struct {
-	sqlDb        *sql.DB
-	jdbcTemplate db.JdbcTemplate
-	minioClient  minio.Client
+type DependencyInjectionImpl struct {
 	noteService  entity.NoteService
 	minioService filestorage.MinioService
 }
 
-func (di dependencyInjectionImpl) GetNoteService() entity.NoteService {
-	return di.noteService
+func (depInj *DependencyInjectionImpl) Initialize(
+	noteService entity.NoteService,
+	minioService filestorage.MinioService) {
+
+	depInj.noteService = noteService
+	depInj.minioService = minioService
 }
 
-func (di dependencyInjectionImpl) GetMinioService() filestorage.MinioService {
-	return di.minioService
+//TODO что за приколы с наследование и указателями? почему при указателях интерфейс не наследуюется
+func (depInj DependencyInjectionImpl) GetNoteService() entity.NoteService {
+	return depInj.noteService
+}
+
+func (depInj DependencyInjectionImpl) GetMinioService() filestorage.MinioService {
+	return depInj.minioService
 }

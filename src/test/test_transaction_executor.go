@@ -50,12 +50,13 @@ func ExecuteTestRollbackTransaction(
 		JdbcTemplate: &testJdbcTemplate,
 		MinioService: &minioServiceImplTest}
 
-	var testDiValue di.DependencyInjection = TestDependencyInjectionImpl{
-		NoteServiceValue: noteService, MinioServiceValue: minioServiceImplTest}
 	/* mocking global object function*/
-	di.GetInstance = func() di.DependencyInjection {
-		return testDiValue
-	}
+	depInj := new(di.DependencyInjectionImpl)
+	depInj.Initialize(noteService, minioServiceImplTest)
+
+	// TODO почитать про TestMain метод для инициализации тестов
+	var value di.DependencyInjection = *depInj
+	di.SetDiFromTest(&value)
 
 	txFunc()
 }

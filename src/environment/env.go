@@ -21,14 +21,18 @@ func GetEnvVariables() EnvVariables {
 
 func loadEnvironmentVariables() {
 	profile := os.Getenv(utils.ProfileEnvName)
-	log.Println("используется профиль запуска - " + profile)
+	if (profile != "") {
+		log.Println("используется профиль запуска - " + profile)
+	} else {
+		log.Fatalln("не указан профиль запуска")
+	}
 
 	if profile == "DEV" || profile == "TEST" {
 		loadDevEnv()
 	} else if profile == "PROD" {
 		/* already in env */
 	} else {
-		log.Fatalln("не указан профиль запуска")
+		log.Fatalln("неизвестный профиль запуска - " + profile)
 	}
 
 	env.MinioEndpoint = getEnvWithCheckExists(utils.MinioEndpointEnvName)
