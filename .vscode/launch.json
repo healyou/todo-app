@@ -18,7 +18,7 @@
             "mode": "debug",
             "program": "${workspaceFolder}/src/main/main.go",
             "env": {
-                "PROFILE":"DEV"
+                "APP_PROFILE_ACTIVE":"DEV"
             }
         }
     ]

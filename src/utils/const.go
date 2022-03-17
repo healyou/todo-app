@@ -1,6 +1,6 @@
 package utils
 
-const ProfileEnvName = "PROFILE"
+const ProfileEnvName = "APP_PROFILE_ACTIVE"
 const MinioEndpointEnvName = "MINIO_ENDPOINT"
 const MinioAccessKeyEnvName = "MINIO_ACCESS_KEY"
 const MinioSecretKeyEnvName = "MINIO_SECRET_KEY"

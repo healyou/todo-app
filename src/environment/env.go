@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"flag"
 	"log"
 	"os"
 	"sync"
@@ -22,9 +23,18 @@ func GetEnvVariables() EnvVariables {
 func loadEnvironmentVariables() {
 	profile := os.Getenv(utils.ProfileEnvName)
 	if (profile != "") {
-		log.Println("используется профиль запуска - " + profile)
+		log.Println("используется профиль запуска из ENV - " + profile)
 	} else {
-		log.Fatalln("не указан профиль запуска")
+		/* try load from args */
+		argProfile := flag.String(utils.ProfileEnvName, "", "профиль запуска")
+		flag.Parse()
+
+		if (*argProfile == "") {
+			log.Fatalln("не указан профиль запуска")
+		}
+
+		log.Println("используется профиль запуска из args - " + *argProfile)
+		profile = *argProfile
 	}
 
 	if profile == "DEV" || profile == "TEST" {

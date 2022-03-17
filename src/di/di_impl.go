@@ -97,7 +97,6 @@ func (depInj *DependencyInjectionImpl) Initialize(
 	depInj.minioService = minioService
 }
 
-//TODO что за приколы с наследование и указателями? почему при указателях интерфейс не наследуюется
 func (depInj DependencyInjectionImpl) GetNoteService() entity.NoteService {
 	return depInj.noteService
 }

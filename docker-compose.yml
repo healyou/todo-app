@@ -26,8 +26,6 @@ services:
     build:
       context: ./db/flyway
       dockerfile: Dockerfile
-      args:
-        buildno: 1
     pull_policy: build
     image: todo-app-flyway:latest
     container_name: flyway
@@ -94,21 +92,25 @@ services:
       exit 0;
       "
 
-#  todo-app:
-#    image: todo-app:latest
-#    container_name: todo-app
-#    restart: always
-#    environment:
-#      PROFILE: "PROD"
-#      MINIO_ENDPOINT: "localhost:9000"
-#      MINIO_ACCESS_KEY: "minio"
-#      MINIO_SECRET_KEY: "miniopsw"
-#      MY_SQL_DRIVER_NAME: "mysql"
-#      MY_SQL_DATASOURCE_URL: "mysql:mysql@tcp(127.0.0.1:3306)/todo?parseTime=true"
-#    ports:
-#      - "8222:8222"
-#    depends_on:
-#      mysql:
-#        condition: service_healthy
-#      minio:
-#        condition: service_healthy
+  # todo-app:
+  #   image: todo-app:latest
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   pull_policy: build
+  #   container_name: todo-app
+  #   restart: always
+  #   environment:
+  #     APP_PROFILE_ACTIVE: "PROD"
+  #     MINIO_ENDPOINT: "minio:9000"
+  #     MINIO_ACCESS_KEY: "minio"
+  #     MINIO_SECRET_KEY: "miniopsw"
+  #     MY_SQL_DRIVER_NAME: "mysql"
+  #     MY_SQL_DATASOURCE_URL: "mysql:mysql@tcp(mysql:3306)/todo?parseTime=true"
+  #   ports:
+  #     - "8222:8222"
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
