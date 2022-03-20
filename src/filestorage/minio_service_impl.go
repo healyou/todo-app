@@ -3,11 +3,13 @@ package filestorage
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
+	"log"
+
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
-	"log"
+	"github.com/pkg/errors"
 )
 
 const minioFilenameUserOptionName = "Filename"
@@ -33,7 +35,7 @@ func (service MinioServiceImpl) SaveFile(data []byte, filename string) (*string,
 	info, err := service.Client.PutObject(
 		ctx, minioBucketName, uuidWithHyphen, bytes.NewReader(data), int64(len(data)), options)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "ошибка сохранения объекта в minio")
 	}
 
 	return &info.Key, nil
@@ -45,33 +47,37 @@ func (service MinioServiceImpl) GetFile(fileUuid string) ([]byte, error) {
 
 	object, err := service.Client.GetObject(ctx, minioBucketName, fileUuid, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "ошибка получения объекта из minio")
 	}
 	defer func(object *minio.Object) {
-		err := object.Close()
-		if err != nil {
-			log.Println(err)
+		closeErr := object.Close()
+		if closeErr != nil {
+			closeErr = errors.Wrap(closeErr, "ошибка закрытия объекта minio после работы с ним")
+			log.Println(fmt.Printf("%+v", closeErr))
+			if (err == nil) {
+				err = closeErr
+			}
 		}
 	}(object)
 
 	objectInfo, err := object.Stat()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "ошибка получения информации об объекте minio")
 	}
 
 	dataBuffer := new(bytes.Buffer)
 	copySize, err := dataBuffer.ReadFrom(object)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "ошибка копирования файла")
 	}
 	if copySize != objectInfo.Size {
-		return nil, errors.New("не удалось считать данные файла")
+		return nil, errors.New("число скопированнх данных не совпадает с нужным числом")
 	}
 
 	return dataBuffer.Bytes(), err
 }
 
-func (service MinioServiceImpl) RemoveFile(fileUuid string) (error) {
+func (service MinioServiceImpl) RemoveFile(fileUuid string) error {
 	ctx := context.Background()
 	defer ctx.Done()
 	return service.Client.RemoveObject(ctx, minioBucketName, fileUuid, minio.RemoveObjectOptions{})

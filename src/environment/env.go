@@ -2,12 +2,14 @@ package environment
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"sync"
 	"todo/src/utils"
 
 	"github.com/joho/godotenv"
+	"github.com/pkg/errors"
 )
 
 var env EnvVariables
@@ -30,7 +32,9 @@ func loadEnvironmentVariables() {
 		flag.Parse()
 
 		if (*argProfile == "") {
-			log.Fatalln("не указан профиль запуска")
+			err := errors.New("не указан профиль запуска")
+			log.Println(fmt.Printf("%+v", err))
+			os.Exit(1)
 		}
 
 		log.Println("используется профиль запуска из args - " + *argProfile)
@@ -40,9 +44,11 @@ func loadEnvironmentVariables() {
 	if profile == "DEV" || profile == "TEST" {
 		loadDevEnv()
 	} else if profile == "PROD" {
-		/* already in env */
+		/* other var already in env */
 	} else {
-		log.Fatalln("неизвестный профиль запуска - " + profile)
+		err := errors.New("неизвестный профиль запуска - " + profile)
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 
 	env.MinioEndpoint = getEnvWithCheckExists(utils.MinioEndpointEnvName)
@@ -55,7 +61,9 @@ func loadEnvironmentVariables() {
 func getEnvWithCheckExists(envVarName string) string {
 	value := os.Getenv(envVarName)
 	if value == "" {
-		log.Fatalln("не указан параметр в .env - " + envVarName)
+		err := errors.New("не указан параметр в .env - " + envVarName)
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 	return value
 }
@@ -63,8 +71,9 @@ func getEnvWithCheckExists(envVarName string) string {
 func loadDevEnv() {
 	err := godotenv.Load("../../profile_dev.env")
 	if err != nil {
-		log.Println("ошибка загрузки переменных окружения")
-		log.Fatalln(err)
+		err = errors.Wrap(err, "ошибка загрузки переменных окружения")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 }
 

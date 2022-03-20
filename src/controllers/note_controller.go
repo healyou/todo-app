@@ -1,6 +1,7 @@
-package note_controller
+package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,7 +15,7 @@ func SaveNote(c *gin.Context) {
 	var note entity.Note
 	var err = c.BindJSON(&note)
 	if err != nil {
-		log.Println(err)
+		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error()})
 		return
@@ -24,7 +25,7 @@ func SaveNote(c *gin.Context) {
 
 	_, err = noteService.SaveNote(&note)
 	if err != nil {
-		log.Println(err)
+		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error()})
 		return
@@ -45,7 +46,7 @@ func GetActualNote(c *gin.Context) {
 
 	note, err := noteService.GetActualNoteByGuid(guidParam)
 	if err != nil {
-		log.Println(err)
+		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error()})
 		return
@@ -63,6 +64,7 @@ func GetUserNotes(c *gin.Context) {
 
 	var userIdParam, err = strconv.ParseInt(userIdParamStr, 10, 64)
 	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"error": err.Error()})
 		return
@@ -72,7 +74,7 @@ func GetUserNotes(c *gin.Context) {
 
 	notes, err := noteService.GetUserActualNotes(userIdParam)
 	if err != nil {
-		log.Println(err)
+		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error()})
 		return
@@ -92,7 +94,7 @@ func DownNoteVersion(c *gin.Context) {
 
 	var err = noteService.DownNoteVersion(guidParam)
 	if err != nil {
-		log.Println(err)
+		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error()})
 		return
@@ -113,7 +115,7 @@ func UpNoteVersion(c *gin.Context) {
 
 	var err = noteService.UpNoteVersion(guidParam)
 	if err != nil {
-		log.Println(err)
+		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error()})
 		return

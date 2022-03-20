@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -10,6 +11,8 @@ import (
 	"todo/src/entity"
 	"todo/src/environment"
 	"todo/src/utils"
+
+	"github.com/pkg/errors"
 )
 
 var db *sql.DB
@@ -73,7 +76,9 @@ func openMysql() *sql.DB {
 		environment.GetEnvVariables().MySqlDriverName, 
 		environment.GetEnvVariables().MySqlDataSource)
 	if err != nil {
-		log.Fatalln("an error was not expected when opening a stub database connection", err)
+		err := errors.Wrap(err, "ошибка открытия соединения с бд")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 	return db
 }
@@ -82,6 +87,8 @@ func closeDb(db *sql.DB) {
 	log.Println("закрытие соединения с бд")
 	err := db.Close()
 	if err != nil {
-		log.Fatalln("close db error:", err)
+		err := errors.Wrap(err, "ошибка закрытия соединения с бд")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 }

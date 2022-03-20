@@ -1,4 +1,4 @@
-package note_controller
+package controllers
 
 import (
 	"github.com/gin-gonic/gin"

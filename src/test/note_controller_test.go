@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	note_controller "todo/src/controllers"
+	"todo/src/controllers"
 	"todo/src/di"
 	"todo/src/entity"
 
@@ -224,7 +224,7 @@ func TestRestGetUserNotes(t *testing.T) {
 }
 
 func createTestRouter(noteService entity.NoteService) *gin.Engine {
-	return note_controller.SetupRouter()
+	return controllers.SetupRouter()
 }
 
 func createAndGetNewNote(t *testing.T, noteService entity.NoteService) (*entity.Note, error) {

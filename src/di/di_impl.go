@@ -2,9 +2,10 @@ package di
 
 import (
 	"database/sql"
-	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"todo/src/db"
 	"todo/src/entity"
 	"todo/src/environment"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/pkg/errors"
 )
 
 var instance *DependencyInjection = nil
@@ -20,6 +22,7 @@ var hasInit = false
 /* Получить объект одиночку (перед использованием надо проинициализировать) */
 func GetInstance() DependencyInjection {
 	if !hasInit {
+		log.Println("инициализация одиночек")
 		instance = initDependencyNotTest()
 		hasInit = true
 	}
@@ -29,7 +32,9 @@ func GetInstance() DependencyInjection {
 
 func SetDiFromTest(di *DependencyInjection) {
 	if flag.Lookup("test.v") == nil {
-		log.Fatalln(errors.New("устанавливать значение DependencyInjection руками можно только в тестах"))
+		err := errors.New("устанавливать значение DependencyInjection руками можно только в тестах")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	} else {
 		instance = di
 		hasInit = true
@@ -39,7 +44,9 @@ func SetDiFromTest(di *DependencyInjection) {
 /* Инициализация зависимостей приложения */
 func initDependencyNotTest() *DependencyInjection {
 	if flag.Lookup("test.v") != nil {
-		log.Fatalln(errors.New("в тестах необходимо переопределить DependencyInjection"))
+		err := errors.New("в тестах необходимо переопределить DependencyInjection")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 
 	var di = new(DependencyInjectionImpl)
@@ -49,13 +56,15 @@ func initDependencyNotTest() *DependencyInjection {
 		environment.GetEnvVariables().MySqlDriverName,
 		environment.GetEnvVariables().MySqlDataSource)
 	if err != nil {
-		log.Println("Ошибка создания соединения с бд")
-		log.Fatalln(err)
+		err = errors.Wrap(err, "Ошибка создания соединения с бд")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 	err = sqlDb.Ping()
 	if err != nil {
-		log.Println("Ошибка проверки соединения с бд")
-		log.Fatalln(err)
+		err = errors.Wrap(err, "Ошибка проверки соединения с бд")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 
 	/* Minio client */
@@ -67,8 +76,9 @@ func initDependencyNotTest() *DependencyInjection {
 		Secure: false,
 	})
 	if err != nil {
-		log.Println("ошибка подключения к minio")
-		log.Fatalln(err)
+		err = errors.Wrap(err, "ошибка подключения к minio")
+		log.Println(fmt.Printf("%+v", err))
+		os.Exit(1)
 	}
 
 	/* Устанавливаем значения */

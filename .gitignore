@@ -17,3 +17,4 @@
 .idea/
 db/mysql-data
 minio/data
+log/

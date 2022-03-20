@@ -2,6 +2,8 @@ package entity
 
 import (
 	"database/sql"
+
+	"github.com/pkg/errors"
 )
 
 func MapNote(noteRow *sql.Row) (*Note, error) {
@@ -19,14 +21,14 @@ func mapOneNote(noteRow *sql.Row, noteRows *sql.Rows) (*Note, error) {
 			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
 			&deleted, &archive, &actual)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "ошибка маппинга note")
 		}
 	} else {
 		err := noteRows.Scan(
 			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
 			&deleted, &archive, &actual)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "ошибка маппинга note")
 		}
 	}
 	note.Deleted = new(bool)
@@ -59,7 +61,7 @@ func MapNoteFiles(noteFileRows *sql.Rows) ([]NoteFile, error) {
 		err := noteFileRows.Scan(
 			&file.Id, &file.NoteId, &file.Guid, &file.Filename)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "ошибка маппинга notefile")
 		}
 		noteFiles = append(noteFiles, file)
 	}
@@ -73,7 +75,7 @@ func MapNotes(noteRows *sql.Rows) ([]Note, error) {
 	for noteRows.Next() {
 		note, err := mapOneNote(nil, noteRows)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "ошибка маппинга notes")
 		}
 		notes = append(notes, *note)
 	}
