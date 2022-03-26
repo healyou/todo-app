@@ -13,6 +13,7 @@ import (
 	"todo/src/controllers"
 	"todo/src/di"
 	"todo/src/entity"
+	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -40,6 +41,7 @@ func TestRestGetActualNote(t *testing.T) {
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
@@ -80,6 +82,7 @@ func TestRestSaveNote(t *testing.T) {
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(noteJsonBytes)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
@@ -115,6 +118,7 @@ func TestRestDownNoteVersion(t *testing.T) {
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
@@ -160,6 +164,7 @@ func TestRestUpNoteVersion(t *testing.T) {
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
@@ -196,6 +201,7 @@ func TestRestGetUserNotes(t *testing.T) {
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
