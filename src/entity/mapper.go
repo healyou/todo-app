@@ -82,3 +82,36 @@ func MapNotes(noteRows *sql.Rows) ([]Note, error) {
 
 	return notes, nil
 }
+
+func MapNoteVersionHistoryItems(noteVersionInfoRows *sql.Rows) ([]NoteVersionInfo, error) {
+	var noteVersionHistoryItems []NoteVersionInfo
+
+	for noteVersionInfoRows.Next() {
+		item, err := MapOneNoteVersionHistory(noteVersionInfoRows)
+		if err != nil {
+			return nil, errors.Wrap(err, "ошибка маппинга NoteVersionInfo")
+		}
+		noteVersionHistoryItems = append(noteVersionHistoryItems, *item)
+	}
+
+	return noteVersionHistoryItems, nil
+}
+
+func MapOneNoteVersionHistory(noteVersionHistoryRows *sql.Rows) (*NoteVersionInfo, error) {
+	var versionInfo NoteVersionInfo
+
+	var actual int8
+	err := noteVersionHistoryRows.Scan(
+		&versionInfo.NoteId, &versionInfo.PrevNoteVersionId, &versionInfo.Version, &versionInfo.CreateDate, &actual)
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка маппинга NoteVersionInfo")
+	}
+	versionInfo.Actual = new(bool)
+	if actual == 1 {
+		*versionInfo.Actual = true
+	} else {
+		*versionInfo.Actual = false
+	}
+
+	return &versionInfo, nil
+}

@@ -17,5 +17,6 @@ func SetupRouter() *gin.Engine {
 	router.POST("/notes/getUserNotes", GetUserNotes)
 	router.POST("/notes/downNoteVersion", DownNoteVersion)
 	router.POST("/notes/upNoteVersion", UpNoteVersion)
+	router.POST("/notes/getNoteVersionHistory", GetNoteVersionHistory)
 	return router
 }

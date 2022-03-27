@@ -584,3 +584,38 @@ func (service NoteServiceImpl) GetUserActualNotes(userId int64) ([]Note, error) 
 
 	return notes, nil
 }
+
+func (service NoteServiceImpl) GetNoteVersionHistory(noteGuid string) ([]NoteVersionInfo, error) {
+	var noteVersionHistory []NoteVersionInfo
+
+	err := service.JdbcTemplate.ExecuteInTransaction(
+		func(ctx context.Context, DB *sql.Tx) error {
+			/* Получаем список записей */
+			noteHistorySql := "select id as note_id, prev_note_version_id, version, create_date, actual " + 
+						"from note where note_guid = ? order by create_date desc, id desc"
+			noteHistoryResult, err := DB.QueryContext(ctx, noteHistorySql, noteGuid)
+
+			if err != nil {
+				return err
+			}
+			defer func(noteHistoryResult *sql.Rows) {
+				closeError := noteHistoryResult.Close()
+				if closeError != nil {
+					err = closeError
+				}
+			}(noteHistoryResult)
+
+			noteVersionHistory, err = MapNoteVersionHistoryItems(noteHistoryResult)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения списка истории изменения note")
+	}
+
+	return noteVersionHistory, nil
+}

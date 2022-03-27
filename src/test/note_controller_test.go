@@ -13,11 +13,11 @@ import (
 	"todo/src/controllers"
 	"todo/src/di"
 	"todo/src/entity"
-	"todo/src/test/test_utils"
 	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,7 +72,7 @@ func TestRestSaveNoteWithPrivileges(t *testing.T) {
 	defer res.Body.Close()
 	
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	var want = gin.H{"result": true}
@@ -88,7 +88,7 @@ func TestRestSaveNoteWithoutPrivileges(t *testing.T) {
 	defer res.Body.Close()
 	
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assert.Equal(t, res.StatusCode, http.StatusForbidden)
@@ -132,7 +132,7 @@ func TestRestDownNoteVersionWithPrivileges(t *testing.T) {
 	defer res.Body.Close()
 	
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	var want = gin.H{"result": true}
@@ -148,7 +148,7 @@ func TestRestDownNoteVersionWithoutPrivileges(t *testing.T) {
 	defer res.Body.Close()
 	
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assert.Equal(t, res.StatusCode, http.StatusForbidden)
@@ -157,13 +157,11 @@ func TestRestDownNoteVersionWithoutPrivileges(t *testing.T) {
 }
 
 func executeDownNoteVersionRequest(t *testing.T, withPrivilege bool) *http.Response {
-	var router = createTestRouter(di.GetInstance().GetNoteService())
+	noteService := di.GetInstance().GetNoteService()
+	var router = createTestRouter(noteService)
 
 	/* Создаём запрос в rest */
-	var note, err = createAndGetNewNoteWith2Version(t, di.GetInstance().GetNoteService())
-	if err != nil {
-		t.Fatalf("ошибка создания note: %s", err)
-	}
+	var note = CreateAndGetNewNoteWithNVersion(t, noteService, 2)
 	data := url.Values{}
 	data.Set("guid", *note.NoteGuid)
 
@@ -195,14 +193,14 @@ func TestRestUpNoteVersionWithPrivileges(t *testing.T) {
 	defer res.Body.Close()
 	
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	var want = gin.H{"result": true}
 	assert.Equal(t, want, got)
 }
 
-func TestRestUpNoteVersionWithщгеPrivileges(t *testing.T) {
+func TestRestUpNoteVersionWithoutPrivileges(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)
 	defer closeIntegrationTest(t)
 
@@ -211,7 +209,7 @@ func TestRestUpNoteVersionWithщгеPrivileges(t *testing.T) {
 	defer res.Body.Close()
 	
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assert.Equal(t, res.StatusCode, http.StatusForbidden)
@@ -224,11 +222,8 @@ func executeUpNoteVersionRequest(t *testing.T, withPrivilege bool) *http.Respons
 	var router = createTestRouter(noteService)
 
 	/* Создаём запрос в rest */
-	var note, err = createAndGetNewNoteWith2Version(t, noteService)
-	if err != nil {
-		t.Fatalf("ошибка создания note: %s", err)
-	}
-	err = noteService.DownNoteVersion(*note.NoteGuid)
+	var note = CreateAndGetNewNoteWithNVersion(t, noteService, 2)
+	err := noteService.DownNoteVersion(*note.NoteGuid)
 	if err != nil {
 		t.Fatalf("ошибка создания note: %s", err)
 	}
@@ -325,24 +320,101 @@ func createAndGetNewNote(t *testing.T, noteService entity.NoteService) (*entity.
 	return note, nil
 }
 
-func createAndGetNewNoteWith2Version(t *testing.T, noteService entity.NoteService) (*entity.Note, error) {
-	/* Создаём новый note */
-	noteId, err := noteService.SaveNote(CreateNewRandomNote())
+func TestRestGetNoteVersionHistoryWithoutPrivileges(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	/* Выполняем запрос */
+	res := executeGetNoteVersionHistoryRequest(t, false, false)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	got := ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	assert.Equal(t, res.StatusCode, http.StatusForbidden)
+	_, ok := got["error"]
+	assert.True(t, ok, "не найден тег 'error' в json ответе")
+}
+
+func TestRestGetNoteVersionHistoryNoItems(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	/* Выполняем запрос */
+	res := executeGetNoteVersionHistoryRequest(t, true, true)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		t.Fatalf("error was not expected while test method: %s", err)
+		t.Fatalf("ошибка чтения ответа: %s", err)
 	}
-	note, err := noteService.GetNote(*noteId)
+	var got []entity.NoteVersionInfo
+	err = json.Unmarshal(body, &got)
 	if err != nil {
-		t.Fatalf("error was not expected while test method: %s", err)
+		t.Fatalf("ошибка формирования json: %s", err)
 	}
-	/* Создаём 2 версию note */
-	noteId, err = noteService.SaveNote(note)
+
+	/* Проверяем результат */
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	assert.Equal(t, 0, len(got))
+}
+
+func TestRestGetNoteVersionHistoryWithItems(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	/* Выполняем запрос */
+	res := executeGetNoteVersionHistoryRequest(t, true, false)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		t.Fatalf("error was not expected while test method: %s", err)
+		t.Fatalf("ошибка чтения ответа: %s", err)
 	}
-	note, err = noteService.GetNote(*noteId)
+	var got []entity.NoteVersionInfo
+	err = json.Unmarshal(body, &got)
 	if err != nil {
-		t.Fatalf("error was not expected while test method: %s", err)
+		t.Fatalf("ошибка формирования json: %s", err)
 	}
-	return note, nil
+
+	/* Проверяем результат */
+	assert.Equal(t, res.StatusCode, http.StatusOK)
+	assert.True(t, len(got) > 0)
+}
+
+func executeGetNoteVersionHistoryRequest(t *testing.T, withPrivilege bool, randomGuid bool) *http.Response {
+	var noteService = di.GetInstance().GetNoteService()
+	var router = createTestRouter(noteService)
+
+	/* Создаём запрос в rest */
+	var note = CreateAndGetNewNoteWithNVersion(t, noteService, 2)
+
+	data := url.Values{}
+	if randomGuid {
+		data.Set("guid", uuid.New().String())
+	} else {
+		data.Set("guid", *note.NoteGuid)
+	}
+	
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("POST", "/notes/getNoteVersionHistory", strings.NewReader(data.Encode()))
+	if err != nil {
+		t.Fatalf("ошибка формирования http запроса: %s", err)
+	}
+	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	if withPrivilege {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithAllPrivileges(t))
+	} else {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
+	}
+
+	/* Выполняем запрос */
+	router.ServeHTTP(w, req)
+
+	return w.Result()
 }

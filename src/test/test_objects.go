@@ -1,8 +1,14 @@
 package test
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"testing"
 	"todo/src/entity"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -56,4 +62,51 @@ func createNewRandomNoteFile() *entity.NoteFile {
 		Data:     []byte{},
 	}
 	return file
+}
+
+func ParseResponseBody(t *testing.T, res *http.Response) gin.H {
+	bodyBytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Fatalf("ошибка чтения response body: %s", err)
+	}
+	var got gin.H
+	err = json.Unmarshal(bodyBytes, &got)
+	if err != nil {
+		t.Fatalf("ошибка формирования json: %s", err)
+	}
+	return got
+}
+
+func CreateAndGetNewNoteWithNVersion(t *testing.T, noteService entity.NoteService, versionNumber int) *entity.Note {
+	if (versionNumber < 1) {
+		t.Fatalf("нельзя создать note с 0 версий")
+	}
+
+	/* Создаём новый note */
+	note := CreateNewRandomNote()
+	note.Text = new(string)
+	*note.Text = strconv.Itoa(1)
+	noteId, err := noteService.SaveNote(note)
+	if err != nil {
+		t.Fatalf("error was not expected while test method: %s", err)
+	}
+	note, err = noteService.GetNote(*noteId)
+	if err != nil {
+		t.Fatalf("error was not expected while test method: %s", err)
+	}
+
+	for i:=1; i < int(versionNumber); i++ {
+		*note.Text = strconv.Itoa(i + 1)
+		/* Создаём новую версию note */
+		noteId, err = noteService.SaveNote(note)
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+		note, err = noteService.GetNote(*noteId)
+		if err != nil {
+			t.Fatalf("error was not expected while test method: %s", err)
+		}
+	}
+	
+	return note
 }

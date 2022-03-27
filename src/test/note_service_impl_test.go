@@ -6,6 +6,7 @@ import (
 	"todo/src/entity"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -463,4 +464,31 @@ func TestGetUserNotes(t *testing.T) {
 
 		assert.Equal(t, *savedNote.Actual, true)
 	}
+}
+
+func TestGetNoteVersionHistoryNoItems(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var noteService = di.GetInstance().GetNoteService()
+	history, err := noteService.GetNoteVersionHistory(uuid.New().String())
+
+	assert.Nil(t, err)
+	assert.Equal(t, len(history), 0)
+}
+
+func TestGetNoteVersionHistoryWithItems(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var countHistoryItems = 10
+	var noteService = di.GetInstance().GetNoteService()
+	note := CreateAndGetNewNoteWithNVersion(t, noteService, countHistoryItems)
+	history, err := noteService.GetNoteVersionHistory(*note.NoteGuid)
+	if err != nil {
+		t.Fatalf("не получилось получить истории версий note: %s", err)
+	}
+
+	assert.Nil(t, err)
+	assert.Equal(t, countHistoryItems, len(history))
 }

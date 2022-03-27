@@ -3,7 +3,6 @@ package middleware
 import "github.com/pkg/errors"
 
 const CREATE_NOTE_PRIVILEGE = "CREATE_NOTE"
-// TODO - метод получения истории изменения Note
 const VIEW_NOTE_VERSION_HISTORY_PRIVILEGE = "VIEW_NOTE_VERSION_HISTORY"
 const CHANGE_NOTE_VERSION_PRIVILEGE = "CHANGE_NOTE_VERSION"
 

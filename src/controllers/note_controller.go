@@ -178,3 +178,35 @@ func UpNoteVersion(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"result": true})
 }
+
+func GetNoteVersionHistory(c *gin.Context) {
+	userAuthData, err := getUserAuthData(c)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !userAuthData.HasPrivilege(middleware.VIEW_NOTE_VERSION_HISTORY_PRIVILEGE) {
+		message := "недостаточно привилегий для выполнения операции"
+		log.Println("у пользователя - " + *userAuthData.Username + " " + message)
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": message})
+		return
+	}
+
+	var guidParam string = c.PostForm("guid")
+	if len(guidParam) <= 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Не указан параметр 'guid'"})
+		return
+	}
+
+	var noteService = di.GetInstance().GetNoteService()
+	history, err := noteService.GetNoteVersionHistory(guidParam)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, history)
+}

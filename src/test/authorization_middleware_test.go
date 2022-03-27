@@ -10,7 +10,6 @@ import (
 	"time"
 	"todo/src/controllers/middleware"
 	"todo/src/di"
-	"todo/src/test/test_utils"
 	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
@@ -29,7 +28,7 @@ func TestNoAccessTokenError(t *testing.T) {
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assertErrorTokenStatus(t, res, got)
@@ -47,7 +46,7 @@ func TestNotValidAccessTokenError(t *testing.T) {
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assertErrorTokenStatus(t, res, got)
@@ -65,7 +64,7 @@ func TestNotValidTokenClaimsError(t *testing.T) {
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assertErrorTokenStatus(t, res, got)
@@ -83,7 +82,7 @@ func TestValidTokenSuccess(t *testing.T) {
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := test_utils.ParseResponseBody(t, res)
+	got := ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assert.Equal(t, res.StatusCode, http.StatusOK)

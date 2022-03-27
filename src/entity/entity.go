@@ -31,3 +31,11 @@ type NoteFile struct {
 	Data     []byte  `json:"data"`
 	Filename *string `json:"filename"`
 }
+
+type NoteVersionInfo struct {
+	NoteId            *int64     `json:"note_id"`
+	PrevNoteVersionId *int64     `json:"prev_note_version_id"`
+	Version           *int8      `json:"version"`
+	CreateDate        *time.Time `json:"create_date"`
+	Actual            *bool      `json:"actual"`
+}
