@@ -5,15 +5,31 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"todo/src/controllers/middleware"
 	"todo/src/di"
 	"todo/src/entity"
+	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 func SaveNote(c *gin.Context) {
+	userAuthData, err := getUserAuthData(c)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !userAuthData.HasPrivilege(middleware.CREATE_NOTE_PRIVILEGE) {
+		message := "недостаточно привилегий для выполнения операции"
+		log.Println("у пользователя - " + *userAuthData.Username + " " + message)
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": message})
+		return
+	}
+
 	var note entity.Note
-	var err = c.BindJSON(&note)
+	err = c.BindJSON(&note)
 	if err != nil {
 		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -32,6 +48,19 @@ func SaveNote(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"result": true})
+}
+
+func getUserAuthData(c *gin.Context) (*middleware.UserAuthData, error) {
+	data, ok := c.Get(utils.GIN_CONTEXT_USER_AUTH_DATA)
+	if (!ok) {
+		return nil, errors.New("не найдены данные авторизации пользователя " + utils.GIN_CONTEXT_USER_AUTH_DATA)
+	}
+	userAuthData, ok := data.(*middleware.UserAuthData)
+	if (!ok) {
+		return nil, errors.New("данные авторизации пользователя не являются типом 'UserAuthData'")
+	}
+
+	return userAuthData, nil
 }
 
 func GetActualNote(c *gin.Context) {
@@ -83,6 +112,19 @@ func GetUserNotes(c *gin.Context) {
 }
 
 func DownNoteVersion(c *gin.Context) {
+	userAuthData, err := getUserAuthData(c)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !userAuthData.HasPrivilege(middleware.CHANGE_NOTE_VERSION_PRIVILEGE) {
+		message := "недостаточно привилегий для выполнения операции"
+		log.Println("у пользователя - " + *userAuthData.Username + " " + message)
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": message})
+		return
+	}
+
 	var guidParam string = c.PostForm("guid")
 	if len(guidParam) <= 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -92,7 +134,7 @@ func DownNoteVersion(c *gin.Context) {
 
 	var noteService = di.GetInstance().GetNoteService()
 
-	var err = noteService.DownNoteVersion(guidParam)
+	err = noteService.DownNoteVersion(guidParam)
 	if err != nil {
 		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -104,6 +146,19 @@ func DownNoteVersion(c *gin.Context) {
 }
 
 func UpNoteVersion(c *gin.Context) {
+	userAuthData, err := getUserAuthData(c)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !userAuthData.HasPrivilege(middleware.CHANGE_NOTE_VERSION_PRIVILEGE) {
+		message := "недостаточно привилегий для выполнения операции"
+		log.Println("у пользователя - " + *userAuthData.Username + " " + message)
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": message})
+		return
+	}
+
 	var guidParam string = c.PostForm("guid")
 	if len(guidParam) <= 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -113,7 +168,7 @@ func UpNoteVersion(c *gin.Context) {
 
 	var noteService = di.GetInstance().GetNoteService()
 
-	var err = noteService.UpNoteVersion(guidParam)
+	err = noteService.UpNoteVersion(guidParam)
 	if err != nil {
 		log.Println(fmt.Printf("%+v", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{

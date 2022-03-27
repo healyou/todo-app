@@ -13,6 +13,7 @@ import (
 	"todo/src/controllers"
 	"todo/src/di"
 	"todo/src/entity"
+	"todo/src/test/test_utils"
 	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
@@ -41,7 +42,7 @@ func TestRestGetActualNote(t *testing.T) {
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
-	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
@@ -62,45 +63,100 @@ func TestRestGetActualNote(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-func TestRestSaveNote(t *testing.T) {
+func TestRestSaveNoteWithPrivileges(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)
 	defer closeIntegrationTest(t)
 
-	var router = createTestRouter(di.GetInstance().GetNoteService())
-
 	/* Создаём запрос в rest */
+	res := executeSaveNoteRequest(t, true)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	got := test_utils.ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	var want = gin.H{"result": true}
+	assert.Equal(t, want, got)
+}
+
+func TestRestSaveNoteWithoutPrivileges(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	/* Выполняем запрос */
+	res := executeSaveNoteRequest(t, false)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	got := test_utils.ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	assert.Equal(t, res.StatusCode, http.StatusForbidden)
+	_, ok := got["error"]
+	assert.True(t, ok, "не найден тег 'error' в json ответе")
+}
+
+func executeSaveNoteRequest(t *testing.T, withPrivilege bool) *http.Response {
+	var router = createTestRouter(di.GetInstance().GetNoteService())
+	
 	var note = CreateNewRandomNote()
 	noteJsonBytes, err := json.Marshal(*note)
 	if err != nil {
 		t.Fatalf("ошибка формирования json: %s", err)
 	}
 
-	w := httptest.NewRecorder()
 	req, err := http.NewRequest("POST", "/notes/saveNote", bytes.NewBuffer(noteJsonBytes))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(noteJsonBytes)))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
-
-	/* Выполняем запрос */
-	router.ServeHTTP(w, req)
-
-	/* Проверяем результат */
-	var want = gin.H{"result": true}
-	var got gin.H
-	err = json.Unmarshal(w.Body.Bytes(), &got)
-	if err != nil {
-		t.Fatalf("ошибка формирования json: %s", err)
+	if withPrivilege {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithAllPrivileges(t))
+	} else {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
 	}
-	assert.Equal(t, want, got)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	
+	return w.Result()
 }
 
-func TestRestDownNoteVersion(t *testing.T) {
+func TestRestDownNoteVersionWithPrivileges(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)
 	defer closeIntegrationTest(t)
 
+	/* Выполняем запрос */
+	res := executeDownNoteVersionRequest(t, true)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	got := test_utils.ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	var want = gin.H{"result": true}
+	assert.Equal(t, want, got)
+}
+
+func TestRestDownNoteVersionWithoutPrivileges(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	/* Выполняем запрос */
+	res := executeDownNoteVersionRequest(t, false)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	got := test_utils.ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	assert.Equal(t, res.StatusCode, http.StatusForbidden)
+	_, ok := got["error"]
+	assert.True(t, ok, "не найден тег 'error' в json ответе")
+}
+
+func executeDownNoteVersionRequest(t *testing.T, withPrivilege bool) *http.Response {
 	var router = createTestRouter(di.GetInstance().GetNoteService())
 
 	/* Создаём запрос в rest */
@@ -118,25 +174,52 @@ func TestRestDownNoteVersion(t *testing.T) {
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
+	if withPrivilege {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithAllPrivileges(t))
+	} else {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
+	}
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
 
-	/* Проверяем результат */
-	var want = gin.H{"result": true}
-	var got gin.H
-	err = json.Unmarshal(w.Body.Bytes(), &got)
-	if err != nil {
-		t.Fatalf("ошибка формирования json: %s", err)
-	}
-	assert.Equal(t, want, got)
+	return w.Result()
 }
 
-func TestRestUpNoteVersion(t *testing.T) {
+func TestRestUpNoteVersionWithPrivileges(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)
 	defer closeIntegrationTest(t)
 
+	/* Выполняем запрос */
+	res := executeUpNoteVersionRequest(t, true)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	got := test_utils.ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	var want = gin.H{"result": true}
+	assert.Equal(t, want, got)
+}
+
+func TestRestUpNoteVersionWithщгеPrivileges(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	/* Выполняем запрос */
+	res := executeUpNoteVersionRequest(t, false)
+	defer res.Body.Close()
+	
+	/* Парсим ответ */
+	got := test_utils.ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	assert.Equal(t, res.StatusCode, http.StatusForbidden)
+	_, ok := got["error"]
+	assert.True(t, ok, "не найден тег 'error' в json ответе")
+}
+
+func executeUpNoteVersionRequest(t *testing.T, withPrivilege bool) *http.Response {
 	var noteService = di.GetInstance().GetNoteService()
 	var router = createTestRouter(noteService)
 
@@ -164,19 +247,16 @@ func TestRestUpNoteVersion(t *testing.T) {
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
+	if withPrivilege {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithAllPrivileges(t))
+	} else {
+		req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
+	}
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)
 
-	/* Проверяем результат */
-	var want = gin.H{"result": true}
-	var got gin.H
-	err = json.Unmarshal(w.Body.Bytes(), &got)
-	if err != nil {
-		t.Fatalf("ошибка формирования json: %s", err)
-	}
-	assert.Equal(t, want, got)
+	return w.Result()
 }
 
 func TestRestGetUserNotes(t *testing.T) {
@@ -201,7 +281,7 @@ func TestRestGetUserNotes(t *testing.T) {
 	}
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
 
 	/* Выполняем запрос */
 	router.ServeHTTP(w, req)

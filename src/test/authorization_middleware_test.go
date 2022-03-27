@@ -1,8 +1,6 @@
 package test
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,7 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"todo/src/controllers/middleware"
 	"todo/src/di"
+	"todo/src/test/test_utils"
 	"todo/src/utils"
 
 	"github.com/gin-gonic/gin"
@@ -29,7 +29,7 @@ func TestNoAccessTokenError(t *testing.T) {
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := parseResponseBody(t, res)
+	got := test_utils.ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assertErrorTokenStatus(t, res, got)
@@ -47,7 +47,7 @@ func TestNotValidAccessTokenError(t *testing.T) {
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := parseResponseBody(t, res)
+	got := test_utils.ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assertErrorTokenStatus(t, res, got)
@@ -65,7 +65,7 @@ func TestNotValidTokenClaimsError(t *testing.T) {
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := parseResponseBody(t, res)
+	got := test_utils.ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assertErrorTokenStatus(t, res, got)
@@ -78,12 +78,12 @@ func TestValidTokenSuccess(t *testing.T) {
 	/* Выполняем тестовый запрос */
 	res := executeTestGetActualNoteRequest(t, func(header *http.Header) {
 		/* valid token */
-		header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessToken(t))
+		header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
 	})
 	defer res.Body.Close()
 
 	/* Парсим ответ */
-	got := parseResponseBody(t, res)
+	got := test_utils.ParseResponseBody(t, res)
 
 	/* Проверяем результат */
 	assert.Equal(t, res.StatusCode, http.StatusOK)
@@ -117,20 +117,25 @@ func executeTestGetActualNoteRequest(t *testing.T, headerModifier func(header *h
 	return w.Result()
 }
 
-func parseResponseBody(t *testing.T, res *http.Response) gin.H {
-	bodyBytes, err := ioutil.ReadAll(res.Body)
+func CreateTestSuccessTokenWithAllPrivileges(t *testing.T) string {
+	var err error
+	atClaims := jwt.MapClaims{}
+	atClaims["privileges"] = []string{ 
+		middleware.CREATE_NOTE_PRIVILEGE, 
+		middleware.CHANGE_NOTE_VERSION_PRIVILEGE, 
+		middleware.VIEW_NOTE_VERSION_HISTORY_PRIVILEGE}
+	atClaims["user_id"] = 1
+	atClaims["username"] = "admin"
+	atClaims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
+	token, err := at.SignedString([]byte("jdnfksdmfksd"))
 	if err != nil {
-		t.Fatalf("ошибка чтения response body: %s", err)
+		t.Fatalf("ошибка формирования токена: %s", err)
 	}
-	var got gin.H
-	err = json.Unmarshal(bodyBytes, &got)
-	if err != nil {
-		t.Fatalf("ошибка формирования json: %s", err)
-	}
-	return got
+	return token
 }
 
-func CreateTestSuccessToken(t *testing.T) string {
+func CreateTestSuccessTokenWithoutPrivileges(t *testing.T) string {
 	var err error
 	atClaims := jwt.MapClaims{}
 	atClaims["privileges"] = []string{}
