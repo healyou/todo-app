@@ -102,7 +102,7 @@ func executeTestGetActualNoteRequest(t *testing.T, headerModifier func(header *h
 	data.Set("guid", *note.NoteGuid)
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/notes/getActualNote", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "/todo/notes/getActualNote", strings.NewReader(data.Encode()))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
@@ -119,9 +119,9 @@ func executeTestGetActualNoteRequest(t *testing.T, headerModifier func(header *h
 func CreateTestSuccessTokenWithAllPrivileges(t *testing.T) string {
 	var err error
 	atClaims := jwt.MapClaims{}
-	atClaims["privileges"] = []string{ 
-		middleware.CREATE_NOTE_PRIVILEGE, 
-		middleware.CHANGE_NOTE_VERSION_PRIVILEGE, 
+	atClaims["privileges"] = []string{
+		middleware.CREATE_NOTE_PRIVILEGE,
+		middleware.CHANGE_NOTE_VERSION_PRIVILEGE,
 		middleware.VIEW_NOTE_VERSION_HISTORY_PRIVILEGE}
 	atClaims["user_id"] = 1
 	atClaims["username"] = "admin"

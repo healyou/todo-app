@@ -8,15 +8,16 @@ import (
 
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
+	mainRouterGroup := router.Group("/todo")
 
 	/* Определение привилегий пользователя */
-	router.Use(middleware.AuthorizationMiddleware)
+	mainRouterGroup.Use(middleware.AuthorizationMiddleware)
 
-	router.POST("/notes/getActualNote", GetActualNote)
-	router.POST("/notes/saveNote", SaveNote)
-	router.POST("/notes/getUserNotes", GetUserNotes)
-	router.POST("/notes/downNoteVersion", DownNoteVersion)
-	router.POST("/notes/upNoteVersion", UpNoteVersion)
-	router.POST("/notes/getNoteVersionHistory", GetNoteVersionHistory)
+	mainRouterGroup.POST("/notes/getActualNote", GetActualNote)
+	mainRouterGroup.POST("/notes/saveNote", SaveNote)
+	mainRouterGroup.POST("/notes/getUserNotes", GetUserNotes)
+	mainRouterGroup.POST("/notes/downNoteVersion", DownNoteVersion)
+	mainRouterGroup.POST("/notes/upNoteVersion", UpNoteVersion)
+	mainRouterGroup.POST("/notes/getNoteVersionHistory", GetNoteVersionHistory)
 	return router
 }

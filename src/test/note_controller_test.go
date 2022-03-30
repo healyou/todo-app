@@ -36,7 +36,7 @@ func TestRestGetActualNote(t *testing.T) {
 	data.Set("guid", *note.NoteGuid)
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/notes/getActualNote", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "/todo/notes/getActualNote", strings.NewReader(data.Encode()))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
@@ -105,7 +105,7 @@ func executeSaveNoteRequest(t *testing.T, withPrivilege bool) *http.Response {
 		t.Fatalf("ошибка формирования json: %s", err)
 	}
 
-	req, err := http.NewRequest("POST", "/notes/saveNote", bytes.NewBuffer(noteJsonBytes))
+	req, err := http.NewRequest("POST", "/todo/notes/saveNote", bytes.NewBuffer(noteJsonBytes))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
@@ -166,7 +166,7 @@ func executeDownNoteVersionRequest(t *testing.T, withPrivilege bool) *http.Respo
 	data.Set("guid", *note.NoteGuid)
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/notes/downNoteVersion", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "/todo/notes/downNoteVersion", strings.NewReader(data.Encode()))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
@@ -236,7 +236,7 @@ func executeUpNoteVersionRequest(t *testing.T, withPrivilege bool) *http.Respons
 	data.Set("guid", *note.NoteGuid)
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/notes/upNoteVersion", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "/todo/notes/upNoteVersion", strings.NewReader(data.Encode()))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
@@ -270,7 +270,7 @@ func TestRestGetUserNotes(t *testing.T) {
 	data.Set("user_id", strconv.FormatInt(*note.UserId, 10))
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/notes/getUserNotes", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "/todo/notes/getUserNotes", strings.NewReader(data.Encode()))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
@@ -401,7 +401,7 @@ func executeGetNoteVersionHistoryRequest(t *testing.T, withPrivilege bool, rando
 	
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/notes/getNoteVersionHistory", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "/todo/notes/getNoteVersionHistory", strings.NewReader(data.Encode()))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
