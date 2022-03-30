@@ -8,7 +8,7 @@ import (
 
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
-	mainRouterGroup := router.Group("/todo")
+	mainRouterGroup := router.Group("/notes-api")
 
 	/* Определение привилегий пользователя */
 	mainRouterGroup.Use(middleware.AuthorizationMiddleware)

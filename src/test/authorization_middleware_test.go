@@ -102,7 +102,7 @@ func executeTestGetActualNoteRequest(t *testing.T, headerModifier func(header *h
 	data.Set("guid", *note.NoteGuid)
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/todo/notes/getActualNote", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", "/notes-api/notes/getActualNote", strings.NewReader(data.Encode()))
 	if err != nil {
 		t.Fatalf("ошибка формирования http запроса: %s", err)
 	}
