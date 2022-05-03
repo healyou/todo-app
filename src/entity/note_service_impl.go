@@ -37,9 +37,9 @@ func (service NoteServiceImpl) createNote(note *Note) (*int64, error) {
 
 	err := service.JdbcTemplate.ExecuteInTransaction(
 		func(ctx context.Context, DB *sql.Tx) error {
-			insertNoteSql := "INSERT INTO note (note_guid, text, user_id)" +
-				" VALUES (?,?,?)"
-			result, err := DB.ExecContext(ctx, insertNoteSql, note.NoteGuid, note.Text, note.UserId)
+			insertNoteSql := "INSERT INTO note (note_guid, title, text, user_id)" +
+				" VALUES (?,?,?,?)"
+			result, err := DB.ExecContext(ctx, insertNoteSql, note.NoteGuid, note.Title, note.Text, note.UserId)
 			if err != nil {
 				return err
 			}
@@ -297,9 +297,9 @@ func saveNewNoteVersion(DB *sql.Tx, ctx context.Context, note *Note) (*int64, er
 		return nil, errors.Wrap(err, "ошибка получения версии note")
 	}
 
-	insertSql := "INSERT INTO note (prev_note_version_id, note_guid, version, text, actual, user_id) VALUES (?, ?, ?, ?, ?, ?)"
+	insertSql := "INSERT INTO note (prev_note_version_id, note_guid, version, title, text, actual, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
 	insertResult, err := DB.ExecContext(ctx, insertSql,
-		*note.Id, *note.NoteGuid, *noteMaxVersionNumber+1, *note.Text, 1, note.UserId)
+		*note.Id, *note.NoteGuid, *noteMaxVersionNumber+1, *note.Title, *note.Text, 1, note.UserId)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка сохранения записи note")
 	}
@@ -395,7 +395,7 @@ func (service NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Cont
 		if closeError != nil {
 			closeError = errors.Wrap(closeError, "ошибка закрытия resultset")
 			log.Println(fmt.Printf("%+v", closeError))
-			if (err == nil) {
+			if err == nil {
 				err = closeError
 			}
 		}
@@ -450,7 +450,7 @@ func (service NoteServiceImpl) DownNoteVersion(noteGuid string) error {
 			return nil
 		})
 
-	if (err != nil) {
+	if err != nil {
 		return errors.Wrap(err, "ошибка уменьшения версии note")
 	} else {
 		return nil
@@ -494,7 +494,7 @@ func (service NoteServiceImpl) UpNoteVersion(noteGuid string) error {
 			return nil
 		})
 
-	if (err != nil) {
+	if err != nil {
 		return errors.Wrap(err, "ошибка увеличения версии note")
 	} else {
 		return nil
@@ -591,8 +591,8 @@ func (service NoteServiceImpl) GetNoteVersionHistory(noteGuid string) ([]NoteVer
 	err := service.JdbcTemplate.ExecuteInTransaction(
 		func(ctx context.Context, DB *sql.Tx) error {
 			/* Получаем список записей */
-			noteHistorySql := "select id as note_id, prev_note_version_id, version, create_date, actual " + 
-						"from note where note_guid = ? order by create_date desc, id desc"
+			noteHistorySql := "select id as note_id, prev_note_version_id, version, create_date, actual " +
+				"from note where note_guid = ? order by create_date desc, id desc"
 			noteHistoryResult, err := DB.QueryContext(ctx, noteHistorySql, noteGuid)
 
 			if err != nil {

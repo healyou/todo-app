@@ -4,6 +4,7 @@ create table note (
     version     int not null default 0,
     -- Идентификатор записи, с которой была создана текущая запись
     prev_note_version_id int,
+    title       varchar(280) not null,
     text        text,
     user_id     int not null,
     create_date datetime not null DEFAULT now(),

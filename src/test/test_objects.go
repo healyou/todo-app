@@ -16,6 +16,7 @@ func GetNoteWithMaxVersion() *entity.Note {
 	note := &entity.Note{
 		NoteGuid:          new(string),
 		Version:           new(int8),
+		Title:             new(string),
 		Text:              new(string),
 		PrevNoteVersionId: new(int64),
 		UserId:            new(int64),
@@ -24,6 +25,7 @@ func GetNoteWithMaxVersion() *entity.Note {
 	}
 	*note.NoteGuid = "not guid1"
 	*note.Version = 1
+	*note.Title = "note title1_2"
 	*note.Text = "note text1_2"
 	*note.PrevNoteVersionId = 1
 	*note.UserId = 1
@@ -42,6 +44,7 @@ func CreateNewRandomNote() *entity.Note {
 	note := &entity.Note{
 		NoteGuid:  new(string),
 		Version:   new(int8),
+		Title:      new(string),
 		Text:      new(string),
 		UserId:    new(int64),
 		Deleted:   new(bool),
@@ -50,6 +53,7 @@ func CreateNewRandomNote() *entity.Note {
 	}
 	randomUuid := uuid.New().String()
 	*note.NoteGuid = randomUuid
+	*note.Title = randomUuid
 	*note.Text = randomUuid
 	*note.UserId = 1
 	return note
@@ -84,6 +88,8 @@ func CreateAndGetNewNoteWithNVersion(t *testing.T, noteService entity.NoteServic
 
 	/* Создаём новый note */
 	note := CreateNewRandomNote()
+	note.Title = new(string)
+	*note.Title = strconv.Itoa(1)
 	note.Text = new(string)
 	*note.Text = strconv.Itoa(1)
 	noteId, err := noteService.SaveNote(note)

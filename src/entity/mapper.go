@@ -18,14 +18,14 @@ func mapOneNote(noteRow *sql.Row, noteRows *sql.Rows) (*Note, error) {
 	var actual int8
 	if (noteRow != nil) {
 		err := noteRow.Scan(
-			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
+			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Title, &note.Text, &note.UserId, &note.CreateDate, 
 			&deleted, &archive, &actual)
 		if err != nil {
 			return nil, errors.Wrap(err, "ошибка маппинга note")
 		}
 	} else {
 		err := noteRows.Scan(
-			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Text, &note.UserId, &note.CreateDate, 
+			&note.Id, &note.NoteGuid, &note.Version, &note.PrevNoteVersionId, &note.Title, &note.Text, &note.UserId, &note.CreateDate, 
 			&deleted, &archive, &actual)
 		if err != nil {
 			return nil, errors.Wrap(err, "ошибка маппинга note")

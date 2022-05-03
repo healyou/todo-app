@@ -15,7 +15,8 @@ type Note struct {
 	PrevNoteVersionId *int64     `json:"prev_note_version_id"`
 	NoteGuid          *string    `json:"guid"`
 	Version           *int8      `json:"version"`
-	Text              *string    `json:"title"`
+	Title             *string    `json:"title"`
+	Text              *string    `json:"text"`
 	UserId            *int64     `json:"user_id"`
 	CreateDate        *time.Time `json:"create_date"`
 	Deleted           *bool      `json:"deleted"`
