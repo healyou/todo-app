@@ -111,6 +111,49 @@ func GetUserNotes(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, notes)
 }
 
+func GetLastUserNoteMainInfo(c *gin.Context) {
+	var userIdParamStr string = c.PostForm("user_id")
+	if len(userIdParamStr) <= 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Не указан параметр 'user_id'"})
+		return
+	}
+
+	var maxCountLimitParamStr string = c.PostForm("max_count_limit")
+	if len(maxCountLimitParamStr) <= 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Не указан параметр 'max_count_limit'"})
+		return
+	}
+
+	var userIdParam, err = strconv.ParseInt(userIdParamStr, 10, 64)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": err.Error()})
+		return
+	}
+
+	maxCountLimitParam, err := strconv.ParseInt(maxCountLimitParamStr, 10, 64)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": err.Error()})
+		return
+	}
+
+	var noteService = di.GetInstance().GetNoteService()
+
+	notesMainInfo, err := noteService.GetLastUserNoteMainInfo(userIdParam, maxCountLimitParam)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, notesMainInfo)
+}
+
 func DownNoteVersion(c *gin.Context) {
 	userAuthData, err := getUserAuthData(c)
 	if err != nil {

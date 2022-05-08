@@ -585,6 +585,44 @@ func (service NoteServiceImpl) GetUserActualNotes(userId int64) ([]Note, error) 
 	return notes, nil
 }
 
+func (service NoteServiceImpl) GetLastUserNoteMainInfo(userId int64, maxCount int64) ([]MainNoteInfo, error) {
+	if (maxCount < 1) {
+		return nil, errors.New("Нельзя выбрать меньше 1 записи")
+	}
+	
+	var mainNotesInfo []MainNoteInfo
+
+	err := service.JdbcTemplate.ExecuteInTransaction(
+		func(ctx context.Context, DB *sql.Tx) error {
+			/* Получаем список записей */
+			mainNotesInfoSql := "select id,note_guid,version,title,user_id,create_date,actual from note where actual = 1 and user_id = ? order by create_date desc LIMIT ?"
+			mainNotesInfoResult, err := DB.QueryContext(ctx, mainNotesInfoSql, userId, maxCount)
+
+			if err != nil {
+				return err
+			}
+			defer func(mainNotesInfoResult *sql.Rows) {
+				closeError := mainNotesInfoResult.Close()
+				if closeError != nil {
+					err = closeError
+				}
+			}(mainNotesInfoResult)
+
+			mainNotesInfo, err = MapMainNotesInfo(mainNotesInfoResult)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения списка main note info пользователя")
+	}
+
+	return mainNotesInfo, nil
+}
+
 func (service NoteServiceImpl) GetNoteVersionHistory(noteGuid string) ([]NoteVersionInfo, error) {
 	var noteVersionHistory []NoteVersionInfo
 

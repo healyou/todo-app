@@ -25,6 +25,16 @@ type Note struct {
 	NoteFiles         []NoteFile `json:"note_files"`
 }
 
+type MainNoteInfo struct {
+	Id                *int64     `json:"id"`
+	NoteGuid          *string    `json:"guid"`
+	Version           *int8      `json:"version"`
+	Title             *string    `json:"title"`
+	UserId            *int64     `json:"user_id"`
+	CreateDate        *time.Time `json:"create_date"`
+	Actual            *bool      `json:"actual"`
+}
+
 type NoteFile struct {
 	Id       *int64  `json:"id"`
 	NoteId   *int64  `json:"note_id"`

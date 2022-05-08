@@ -304,6 +304,57 @@ func TestRestGetUserNotes(t *testing.T) {
 	assert.Equal(t, findedRecord, true)
 }
 
+func TestRestGetLastUserNoteMainInfo(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var router = createTestRouter(di.GetInstance().GetNoteService())
+
+	/* Создаём запрос в rest */
+	var note, err = createAndGetNewNote(t, di.GetInstance().GetNoteService())
+	if err != nil {
+		t.Fatalf("ошибка создания note: %s", err)
+	}
+
+	data := url.Values{}
+	data.Set("user_id", strconv.FormatInt(*note.UserId, 10))
+	data.Set("max_count_limit", strconv.FormatInt(5, 10))
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("POST", "/notes-api/notes/getLastUserNoteMainInfo", strings.NewReader(data.Encode()))
+	if err != nil {
+		t.Fatalf("ошибка формирования http запроса: %s", err)
+	}
+	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithoutPrivileges(t))
+
+	/* Выполняем запрос */
+	router.ServeHTTP(w, req)
+
+	/* Проверяем результат */
+	body, err := ioutil.ReadAll(w.Body)
+	if err != nil {
+		t.Fatalf("ошибка чтения ответа: %s", err)
+	}
+	var got []entity.MainNoteInfo
+	err = json.Unmarshal(body, &got)
+	if err != nil {
+		t.Fatalf("ошибка формирования json: %s", err)
+	}
+
+	assert.True(t, len(got) >= 1)
+	var findedRecord = false
+	for i := 0; i < len(got); i++ {
+		gotNote := got[i]
+		if (*gotNote.NoteGuid == *note.NoteGuid) {
+			findedRecord = true
+			assert.Equal(t, *note.Id, *gotNote.Id)
+		}
+	}
+	assert.Equal(t, findedRecord, true)
+}
+
 func createTestRouter(noteService entity.NoteService) *gin.Engine {
 	return controllers.SetupRouter()
 }

@@ -14,5 +14,8 @@ type NoteService interface {
 	/* Получить список актуальных записей юзера */
 	GetUserActualNotes(userId int64) ([]Note, error)
 
+	/* Получить основную информацию по последним изменённым заметкам */
+	GetLastUserNoteMainInfo(userId int64, maxCount int64) ([]MainNoteInfo, error)
+
 	GetNoteVersionHistory(noteGuid string) ([]NoteVersionInfo, error)
 }

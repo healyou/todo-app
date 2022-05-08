@@ -473,6 +473,73 @@ func TestGetUserNotes(t *testing.T) {
 	}
 }
 
+func TestGetMainUserNotesInfo(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var noteService = di.GetInstance().GetNoteService()
+
+	/* Создаём notes */
+	const notesCount = 2
+	notes := [notesCount]entity.Note{*CreateNewRandomNote(), *CreateNewRandomNote()}
+	userId := notes[0].UserId
+
+	for index, note := range notes {
+		noteId, err := noteService.SaveNote(&note)
+		note.Id = noteId
+		if err != nil {
+			t.Fatalf("не удалось сохранить note: %s", err)
+		}
+		notes[index] = note
+	}
+
+	/* Получаем записи */
+	mainUserNotesInfo, err := noteService.GetLastUserNoteMainInfo(*userId, notesCount)
+	if err != nil {
+		t.Fatalf("не получилось получить notes: %s", err)
+	}
+
+	/* Проверяем, что данные начитались */
+	assert.NotNil(t, mainUserNotesInfo)
+	assert.True(t, len(mainUserNotesInfo) == notesCount)
+
+	/* Пытаемся получить больше записей, чем есть */
+	mainUserNotesInfo, err = noteService.GetLastUserNoteMainInfo(*userId, notesCount)
+	if err != nil {
+		t.Fatalf("не получилось получить notes: %s", err)
+	}
+
+	/* Проверяем, что выдало записей, сколько создали */
+	assert.NotNil(t, mainUserNotesInfo)
+	assert.True(t, len(mainUserNotesInfo) == notesCount)
+
+	for _, savedNoteInfo := range mainUserNotesInfo {
+		for _, createNote := range notes {
+			if (*savedNoteInfo.Id == *createNote.Id) {
+				assert.Equal(t, *createNote.UserId, *savedNoteInfo.UserId)
+				assert.Equal(t, *createNote.NoteGuid, *savedNoteInfo.NoteGuid)
+				assert.Equal(t, *createNote.Version, *savedNoteInfo.Version)
+				assert.Equal(t, *createNote.Title, *savedNoteInfo.Title)
+				assert.NotNil(t, *savedNoteInfo.CreateDate)
+			}
+		}
+
+		assert.Equal(t, *savedNoteInfo.Actual, true)
+	}
+}
+
+func TestGetMainUserNotesInfoCountError(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var noteService = di.GetInstance().GetNoteService()
+
+	/* Пытаемся получить 0 записей */
+	mainUserNotesInfo, err := noteService.GetLastUserNoteMainInfo(1, 0)
+	assert.Nil(t, mainUserNotesInfo)
+	assert.NotNil(t, err)
+}
+
 func TestGetNoteVersionHistoryNoItems(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)
 	defer closeIntegrationTest(t)
