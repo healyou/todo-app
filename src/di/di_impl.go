@@ -87,7 +87,7 @@ func initDependencyNotTest() *DependencyInjection {
 		Client: minioClient}
 	noteService := entity.NoteServiceImpl{
 		JdbcTemplate: jdbcTemplate,
-		MinioService: di.minioService}
+		MinioService: minioService}
 	di.Initialize(noteService, minioService)
 
 	var depInj DependencyInjection = *di

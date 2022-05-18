@@ -44,7 +44,7 @@ func CreateNewRandomNote() *entity.Note {
 	note := &entity.Note{
 		NoteGuid:  new(string),
 		Version:   new(int8),
-		Title:      new(string),
+		Title:     new(string),
 		Text:      new(string),
 		UserId:    new(int64),
 		Deleted:   new(bool),
@@ -63,7 +63,7 @@ func createNewRandomNoteFile() *entity.NoteFile {
 	randomUuid := uuid.New().String()
 	file := &entity.NoteFile{
 		Filename: &randomUuid,
-		Data:     []byte{},
+		Data:     []byte{1, 2, 3},
 	}
 	return file
 }
@@ -82,7 +82,7 @@ func ParseResponseBody(t *testing.T, res *http.Response) gin.H {
 }
 
 func CreateAndGetNewNoteWithNVersion(t *testing.T, noteService entity.NoteService, versionNumber int) *entity.Note {
-	if (versionNumber < 1) {
+	if versionNumber < 1 {
 		t.Fatalf("нельзя создать note с 0 версий")
 	}
 
@@ -101,7 +101,7 @@ func CreateAndGetNewNoteWithNVersion(t *testing.T, noteService entity.NoteServic
 		t.Fatalf("error was not expected while test method: %s", err)
 	}
 
-	for i:=1; i < int(versionNumber); i++ {
+	for i := 1; i < int(versionNumber); i++ {
 		*note.Text = strconv.Itoa(i + 1)
 		/* Создаём новую версию note */
 		noteId, err = noteService.SaveNote(note)
@@ -113,6 +113,6 @@ func CreateAndGetNewNoteWithNVersion(t *testing.T, noteService entity.NoteServic
 			t.Fatalf("error was not expected while test method: %s", err)
 		}
 	}
-	
+
 	return note
 }
