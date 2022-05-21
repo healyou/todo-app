@@ -381,6 +381,39 @@ func (service NoteServiceImpl) GetNote(id int64) (*Note, error) {
 	}
 }
 
+func (service NoteServiceImpl) GetNoteFile(noteFileId int64) (*NoteFile, error) {
+	var noteFile *NoteFile
+
+	err := service.JdbcTemplate.ExecuteInTransaction(
+		func(ctx context.Context, DB *sql.Tx) error {
+			noteSql := "select * from note_file where id = ?"
+			noteFileResult := DB.QueryRowContext(ctx, noteSql, noteFileId)
+			err := noteFileResult.Err()
+			if err != nil {
+				return err
+			}
+
+			noteFile, err = MapNoteFile(noteFileResult)
+			if err != nil {
+				return err
+			}
+
+			data, err := service.MinioService.GetFile(*noteFile.Guid)
+			if err != nil {
+				return err
+			}
+			noteFile.Data = data
+
+			return nil
+		})
+
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения записи note_file")
+	} else {
+		return noteFile, nil
+	}
+}
+
 func (service NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Context, noteId int64) ([]NoteFile, error) {
 	noteFilesSql :=
 		"select * from note_file where note_id in (" +
@@ -586,10 +619,10 @@ func (service NoteServiceImpl) GetUserActualNotes(userId int64) ([]Note, error) 
 }
 
 func (service NoteServiceImpl) GetLastUserNoteMainInfo(userId int64, maxCount int64) ([]MainNoteInfo, error) {
-	if (maxCount < 1) {
+	if maxCount < 1 {
 		return nil, errors.New("Нельзя выбрать меньше 1 записи")
 	}
-	
+
 	var mainNotesInfo []MainNoteInfo
 
 	err := service.JdbcTemplate.ExecuteInTransaction(

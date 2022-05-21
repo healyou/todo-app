@@ -14,6 +14,44 @@ import (
 	"github.com/pkg/errors"
 )
 
+func DownloadNoteFile(c *gin.Context) {
+	_, err := getUserAuthData(c)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var idParamStr string = c.PostForm("id")
+	if len(idParamStr) <= 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Не указан параметр 'id'"})
+		return
+	}
+
+	idParam, err := strconv.ParseInt(idParamStr, 10, 64)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": err.Error()})
+		return
+	}
+
+	var noteService = di.GetInstance().GetNoteService()
+	noteFile, err := noteService.GetNoteFile(idParam)
+	if err != nil {
+		log.Println(fmt.Printf("%+v", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Disposition", "attachment; filename=\""+*noteFile.Filename+"\"")
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Content-Length", strconv.Itoa(len(noteFile.Data)))
+	c.Data(http.StatusOK, "application/octet-stream", noteFile.Data)
+}
+
 func SaveNote(c *gin.Context) {
 	userAuthData, err := getUserAuthData(c)
 	if err != nil {
@@ -52,11 +90,11 @@ func SaveNote(c *gin.Context) {
 
 func getUserAuthData(c *gin.Context) (*middleware.UserAuthData, error) {
 	data, ok := c.Get(utils.GIN_CONTEXT_USER_AUTH_DATA)
-	if (!ok) {
+	if !ok {
 		return nil, errors.New("не найдены данные авторизации пользователя " + utils.GIN_CONTEXT_USER_AUTH_DATA)
 	}
 	userAuthData, ok := data.(*middleware.UserAuthData)
-	if (!ok) {
+	if !ok {
 		return nil, errors.New("данные авторизации пользователя не являются типом 'UserAuthData'")
 	}
 

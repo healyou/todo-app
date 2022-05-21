@@ -69,6 +69,17 @@ func MapNoteFiles(noteFileRows *sql.Rows) ([]NoteFile, error) {
 	return noteFiles, nil
 }
 
+func MapNoteFile(noteFileRow *sql.Row) (*NoteFile, error) {
+	var file NoteFile
+	err := noteFileRow.Scan(
+		&file.Id, &file.NoteId, &file.Guid, &file.Filename)
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка маппинга notefile")
+	}
+
+	return &file, nil
+}
+
 func MapNotes(noteRows *sql.Rows) ([]Note, error) {
 	var notes []Note
 

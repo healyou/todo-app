@@ -431,6 +431,37 @@ func TestErrorDoubleUpNewNoteVersion(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestGetNoteFile(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var noteService = di.GetInstance().GetNoteService()
+
+	/* Создаём note c файлами */
+	note := CreateNewRandomNote()
+	_, err := noteService.SaveNote(note)
+	if err != nil {
+		t.Fatalf("не удалось сохранить note: %s", err)
+	}
+	/* Получаем note */
+	savedNote, err := noteService.GetActualNoteByGuid(*note.NoteGuid)
+	if err != nil {
+		t.Fatalf("не удалось получить note: %s", err)
+	}
+
+	assert.True(t, len(savedNote.NoteFiles) > 0)
+
+	expectedNoteFile := savedNote.NoteFiles[0]
+	noteFile, err := noteService.GetNoteFile(*expectedNoteFile.Id)
+	if err != nil {
+		t.Fatalf("не удалось получить note_file: %s", err)
+	}
+
+	assert.Equal(t, *expectedNoteFile.Id, *noteFile.Id)
+	assert.Equal(t, *expectedNoteFile.Guid, *noteFile.Guid)
+	assert.Equal(t, *expectedNoteFile.Filename, *noteFile.Filename)
+	assert.Equal(t, *expectedNoteFile.NoteId, *noteFile.NoteId)
+}
 
 func TestGetUserNotes(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)

@@ -1,8 +1,6 @@
 package test
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,45 +16,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestSaveNewNoteWithAllPrivileges(t *testing.T) {
-	closeIntegrationTest := InitIntegrationTest(t)
-	defer closeIntegrationTest(t)
-
-	var router = createTestRouter(di.GetInstance().GetNoteService())
-
-	/* Создаём запрос в rest */
-	var note = CreateNewRandomNote()
-	body, err := json.Marshal(note)
-	if err != nil {
-		t.Fatalf("ошибка формирования json тела запроса: %s", err)
-	}
-
-	w := httptest.NewRecorder()
-	var bufferBody = bytes.NewBuffer(body)
-
-	req, err := http.NewRequest("POST", "/notes-api/notes/saveNote", bufferBody)
-	if err != nil {
-		t.Fatalf("ошибка формирования http запроса: %s", err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Content-Length", strconv.Itoa(bufferBody.Len()))
-	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithAllPrivileges(t))
-
-	/* Выполняем запрос */
-	router.ServeHTTP(w, req)
-	/* Получаем результат */
-	var res = w.Result()
-	defer res.Body.Close()
-
-	/* Парсим ответ */
-	got := ParseResponseBody(t, res)
-
-	/* Проверяем результат */
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-	_, ok := got["result"]
-	assert.True(t, ok, "не найден тег 'result' в json ответе")
-}
 
 func TestNoAccessTokenError(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)

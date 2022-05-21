@@ -18,4 +18,6 @@ type NoteService interface {
 	GetLastUserNoteMainInfo(userId int64, maxCount int64) ([]MainNoteInfo, error)
 
 	GetNoteVersionHistory(noteGuid string) ([]NoteVersionInfo, error)
+
+	GetNoteFile(noteFileId int64) (*NoteFile, error)
 }

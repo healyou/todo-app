@@ -70,7 +70,7 @@ func TestRestSaveNoteWithPrivileges(t *testing.T) {
 	/* Создаём запрос в rest */
 	res := executeSaveNoteRequest(t, true)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	got := ParseResponseBody(t, res)
 
@@ -86,7 +86,7 @@ func TestRestSaveNoteWithoutPrivileges(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeSaveNoteRequest(t, false)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	got := ParseResponseBody(t, res)
 
@@ -98,7 +98,7 @@ func TestRestSaveNoteWithoutPrivileges(t *testing.T) {
 
 func executeSaveNoteRequest(t *testing.T, withPrivilege bool) *http.Response {
 	var router = createTestRouter(di.GetInstance().GetNoteService())
-	
+
 	var note = CreateNewRandomNote()
 	noteJsonBytes, err := json.Marshal(*note)
 	if err != nil {
@@ -119,7 +119,7 @@ func executeSaveNoteRequest(t *testing.T, withPrivilege bool) *http.Response {
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	
+
 	return w.Result()
 }
 
@@ -130,7 +130,7 @@ func TestRestDownNoteVersionWithPrivileges(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeDownNoteVersionRequest(t, true)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	got := ParseResponseBody(t, res)
 
@@ -146,7 +146,7 @@ func TestRestDownNoteVersionWithoutPrivileges(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeDownNoteVersionRequest(t, false)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	got := ParseResponseBody(t, res)
 
@@ -191,7 +191,7 @@ func TestRestUpNoteVersionWithPrivileges(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeUpNoteVersionRequest(t, true)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	got := ParseResponseBody(t, res)
 
@@ -207,7 +207,7 @@ func TestRestUpNoteVersionWithoutPrivileges(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeUpNoteVersionRequest(t, false)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	got := ParseResponseBody(t, res)
 
@@ -254,6 +254,81 @@ func executeUpNoteVersionRequest(t *testing.T, withPrivilege bool) *http.Respons
 	return w.Result()
 }
 
+func TestGetNoteFileData(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var router = createTestRouter(di.GetInstance().GetNoteService())
+
+	/* Создаём запрос в rest */
+	var note, err = createAndGetNewNote(t, di.GetInstance().GetNoteService())
+	if err != nil {
+		t.Fatalf("ошибка создания note: %s", err)
+	}
+	assert.True(t, len(note.NoteFiles) > 0)
+
+	data := url.Values{}
+	data.Set("id", strconv.FormatInt(*note.NoteFiles[0].Id, 10))
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("POST", "/notes-api/notes/getNoteFileBody", strings.NewReader(data.Encode()))
+	if err != nil {
+		t.Fatalf("ошибка формирования http запроса: %s", err)
+	}
+	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithAllPrivileges(t))
+
+	/* Выполняем запрос */
+	router.ServeHTTP(w, req)
+
+	/* Получаем результат */
+	var res = w.Result()
+	defer res.Body.Close()
+
+	/* Проверяем результат */
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
+
+func TestSaveNewNoteWithAllPrivileges(t *testing.T) {
+	closeIntegrationTest := InitIntegrationTest(t)
+	defer closeIntegrationTest(t)
+
+	var router = createTestRouter(di.GetInstance().GetNoteService())
+
+	/* Создаём запрос в rest */
+	var note = CreateNewRandomNote()
+	body, err := json.Marshal(note)
+	if err != nil {
+		t.Fatalf("ошибка формирования json тела запроса: %s", err)
+	}
+
+	w := httptest.NewRecorder()
+	var bufferBody = bytes.NewBuffer(body)
+
+	req, err := http.NewRequest("POST", "/notes-api/notes/saveNote", bufferBody)
+	if err != nil {
+		t.Fatalf("ошибка формирования http запроса: %s", err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Length", strconv.Itoa(bufferBody.Len()))
+	req.Header.Add(utils.JSON_IN_ACCESS_TOKEN_CODE, CreateTestSuccessTokenWithAllPrivileges(t))
+
+	/* Выполняем запрос */
+	router.ServeHTTP(w, req)
+	/* Получаем результат */
+	var res = w.Result()
+	defer res.Body.Close()
+
+	/* Парсим ответ */
+	got := ParseResponseBody(t, res)
+
+	/* Проверяем результат */
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	_, ok := got["result"]
+	assert.True(t, ok, "не найден тег 'result' в json ответе")
+}
+
 func TestRestGetUserNotes(t *testing.T) {
 	closeIntegrationTest := InitIntegrationTest(t)
 	defer closeIntegrationTest(t)
@@ -296,7 +371,7 @@ func TestRestGetUserNotes(t *testing.T) {
 	var findedRecord = false
 	for i := 0; i < len(got); i++ {
 		gotNote := got[i]
-		if (*gotNote.NoteGuid == *note.NoteGuid) {
+		if *gotNote.NoteGuid == *note.NoteGuid {
 			findedRecord = true
 			assert.Equal(t, *note.Id, *gotNote.Id)
 		}
@@ -347,7 +422,7 @@ func TestRestGetLastUserNoteMainInfo(t *testing.T) {
 	var findedRecord = false
 	for i := 0; i < len(got); i++ {
 		gotNote := got[i]
-		if (*gotNote.NoteGuid == *note.NoteGuid) {
+		if *gotNote.NoteGuid == *note.NoteGuid {
 			findedRecord = true
 			assert.Equal(t, *note.Id, *gotNote.Id)
 		}
@@ -378,7 +453,7 @@ func TestRestGetNoteVersionHistoryWithoutPrivileges(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeGetNoteVersionHistoryRequest(t, false, false)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	got := ParseResponseBody(t, res)
 
@@ -395,7 +470,7 @@ func TestRestGetNoteVersionHistoryNoItems(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeGetNoteVersionHistoryRequest(t, true, true)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -419,7 +494,7 @@ func TestRestGetNoteVersionHistoryWithItems(t *testing.T) {
 	/* Выполняем запрос */
 	res := executeGetNoteVersionHistoryRequest(t, true, false)
 	defer res.Body.Close()
-	
+
 	/* Парсим ответ */
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -449,7 +524,6 @@ func executeGetNoteVersionHistoryRequest(t *testing.T, withPrivilege bool, rando
 	} else {
 		data.Set("guid", *note.NoteGuid)
 	}
-	
 
 	w := httptest.NewRecorder()
 	req, err := http.NewRequest("POST", "/notes-api/notes/getNoteVersionHistory", strings.NewReader(data.Encode()))
