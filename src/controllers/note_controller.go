@@ -46,6 +46,7 @@ func DownloadNoteFile(c *gin.Context) {
 		return
 	}
 
+	c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	c.Header("Content-Disposition", "attachment; filename=\""+*noteFile.Filename+"\"")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Length", strconv.Itoa(len(noteFile.Data)))
