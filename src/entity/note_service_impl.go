@@ -438,15 +438,6 @@ func (service NoteServiceImpl) getNoteFilesByNoteId(DB *sql.Tx, ctx context.Cont
 		return nil, errors.Wrap(err, "ошибка маппинга note_file")
 	}
 
-	for i := 0; i < len(noteFiles); i++ {
-		file := &noteFiles[i]
-		data, err := service.MinioService.GetFile(*file.Guid)
-		if err != nil {
-			return nil, errors.Wrap(err, "ошибка получения файла из minio")
-		}
-		file.Data = data
-	}
-
 	return noteFiles, nil
 }
 

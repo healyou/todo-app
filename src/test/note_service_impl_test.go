@@ -47,7 +47,7 @@ func TestSaveNewNoteWithData(t *testing.T) {
 		expectedFile := savedNote.NoteFiles[i]
 		assert.NotNil(t, createdFile.Id)
 		assert.NotNil(t, createdFile.Guid)
-		assert.NotNil(t, createdFile.Data)
+		assert.Nil(t, createdFile.Data)
 		assert.Equal(t, *createdFile.NoteId, *createdNote.Id)
 		assert.Equal(t, *createdFile.Filename, *expectedFile.Filename)
 	}
@@ -58,8 +58,10 @@ func TestGetNote(t *testing.T) {
 	defer closeIntegrationTest(t)
 
 	var noteService = di.GetInstance().GetNoteService()
+	var newNote = CreateNewRandomNote()
+	assert.True(t, len(newNote.NoteFiles) > 0)
 
-	noteId, err := noteService.SaveNote(CreateNewRandomNote())
+	noteId, err := noteService.SaveNote(newNote)
 	if err != nil {
 		t.Fatalf("error was not expected while test method: %s", err)
 	}
@@ -80,6 +82,15 @@ func TestGetNote(t *testing.T) {
 	assert.NotNil(t, *result.Deleted)
 	assert.NotNil(t, *result.Archive)
 	assert.NotNil(t, result.NoteFiles)
+	assert.Equal(t, len(newNote.NoteFiles), len(result.NoteFiles))
+	for i:=0; i < len(result.NoteFiles); i++ {
+		file := result.NoteFiles[i]
+		assert.NotNil(t, file.Id)
+		assert.NotNil(t, file.Filename)
+		assert.NotNil(t, file.Guid)
+		assert.NotNil(t, file.NoteId)
+		assert.Nil(t, file.Data)
+	}
 }
 
 func TestGetNoteByNoteGuid(t *testing.T) {
@@ -110,6 +121,15 @@ func TestGetNoteByNoteGuid(t *testing.T) {
 	assert.Equal(t, *result.Deleted, *result.Deleted)
 	assert.Equal(t, *result.Archive, *result.Archive)
 	assert.NotNil(t, result.NoteFiles)
+	assert.Equal(t, len(note.NoteFiles), len(result.NoteFiles))
+	for i:=0; i < len(result.NoteFiles); i++ {
+		file := result.NoteFiles[i]
+		assert.NotNil(t, file.Id)
+		assert.NotNil(t, file.Filename)
+		assert.NotNil(t, file.Guid)
+		assert.NotNil(t, file.NoteId)
+		assert.Nil(t, file.Data)
+	}
 }
 
 func TestUpdateNote(t *testing.T) {
