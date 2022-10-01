@@ -3,7 +3,7 @@ version: '3.2'
 services:
 
   mysql:
-    image: mysql:8.0.27
+    image: todo-app-mysql:latest
     container_name: mysql
     command: --default-authentication-plugin=mysql_native_password
     restart: always
@@ -11,14 +11,14 @@ services:
       - "3306:3306"
     volumes:
       - ./db/mysql-data:/var/lib/mysql
-      - ./db/mysql-initdb-d:/docker-entrypoint-initdb.d
     environment:
       MYSQL_RANDOM_ROOT_PASSWORD: "yes"
       MYSQL_USER: "mysql"
       MYSQL_PASSWORD: "mysql"
       MYSQL_DATABASE: "todo"
     healthcheck:
-      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost", '-u', 'mysql', '-pmysql']
+      interval: 45s
       timeout: 10s
       retries: 5
 
@@ -59,11 +59,12 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfull
 
   minio:
     image: minio/minio:RELEASE.2022-01-27T03-53-02Z
     container_name: minio
-    #    restart: always
     command: "server /data --console-address ':9001'"
     ports:
       - "9000:9000"
@@ -92,27 +93,27 @@ services:
       exit 0;
       "
 
-  todo-app:
-    image: todo-app:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-    pull_policy: build
-    container_name: todo-app
-    volumes:
-      - ./log:/src/log
-    environment:
-      APP_PROFILE_ACTIVE: "PROD"
-      MINIO_ENDPOINT: "minio:9000"
-      MINIO_ACCESS_KEY: "minio"
-      MINIO_SECRET_KEY: "miniopsw"
-      MY_SQL_DRIVER_NAME: "mysql"
-      MY_SQL_DATASOURCE_URL: "mysql:mysql@tcp(mysql:3306)/todo?parseTime=true"
-      LOG_FILE_PATH_WITH_NAME: "/src/log/todo_app.log"
-    ports:
-      - "8222:8222"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
+  # todo-app:
+  #   image: todo-app:latest
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   pull_policy: build
+  #   container_name: todo-app
+  #   volumes:
+  #     - ./log:/src/log
+  #   environment:
+  #     APP_PROFILE_ACTIVE: "PROD"
+  #     MINIO_ENDPOINT: "minio:9000"
+  #     MINIO_ACCESS_KEY: "minio"
+  #     MINIO_SECRET_KEY: "miniopsw"
+  #     MY_SQL_DRIVER_NAME: "mysql"
+  #     MY_SQL_DATASOURCE_URL: "mysql:mysql@tcp(mysql:3306)/todo?parseTime=true"
+  #     LOG_FILE_PATH_WITH_NAME: "/src/log/todo_app.log"
+  #   ports:
+  #     - "8222:8222"
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy

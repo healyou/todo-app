@@ -17,8 +17,12 @@
 Dockerfile - /db/flyway/Dockerfile
 Из папки /db/flyway выполнить команду 'docker build --no-cache -t todo-app-flyway .'
 
+### Сборка бд docker image
+./db/Dockerfile - Файл с инструкциями для docker image
+docker build --no-cache -t todo-app-mysql .
+
 ### Сборка go приложения
-Dockerfile - Файл Dockerfile находится в корне проекта
+./Dockerfile - Файл Dockerfile находится в корне проекта
 Из корня проекта выполнить команду 'docker build --no-cache -t todo-app .'
 
 ## Запуск mysql бд и minio в docker
@@ -51,4 +55,5 @@ localhost:8222 - rest service приложения
 Тесты работают с поднятой mysql бд, minio мокируется, транзакции откатываются. 
 Устанавливается профиль 'TEST' и параметры берутся из profile_dev.env
 
-Для запуска тестов выполнить из папки /src/test выполнить команду 'go test' 
+Перед тестами выполнить очистку кеша тестов 'go clean -testcache'
+Для запуска тестов выполнить из папки /src/test выполнить команду 'go test'

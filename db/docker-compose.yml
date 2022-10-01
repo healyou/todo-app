@@ -1,9 +1,9 @@
-version: '3.2'
+version: '3.8'
 
 services:
 
   mysql:
-    image: mysql:8.0.27
+    image: todo-app-mysql:latest
     container_name: mysql
     command: --default-authentication-plugin=mysql_native_password
     restart: always
@@ -11,14 +11,14 @@ services:
       - "3306:3306"
     volumes:
       - ./mysql-data:/var/lib/mysql
-      - ./mysql-initdb-d:/docker-entrypoint-initdb.d
     environment:
       MYSQL_RANDOM_ROOT_PASSWORD: "yes"
       MYSQL_USER: "mysql"
       MYSQL_PASSWORD: "mysql"
       MYSQL_DATABASE: "todo"
     healthcheck:
-      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost", '-u', 'mysql', '-pmysql']
+      interval: 45s
       timeout: 10s
       retries: 5
 
@@ -40,8 +40,6 @@ services:
       HTPASSWD: admin:$$apr1$$K3hIHvp9$$CGnOCuffpwYynXXLaB8Fm/
       FORWARD_HOST: adminer
       FORWARD_PORT: 8080
-    links:
-      - adminer
     depends_on:
       - adminer
 
@@ -55,3 +53,5 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
